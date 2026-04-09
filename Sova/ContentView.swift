@@ -198,13 +198,14 @@ struct ContentView: View {
                             VStack(spacing: 8) {
                                 Image(systemName: category.symbolName)
                                     .font(.title3)
+                                    .foregroundStyle(.sovaPrimaryAccent)
                                     .frame(width: 44, height: 44)
                                     .background(Color.sovaPrimaryAccent.opacity(0.12), in: .circle)
                                 Text(category.rawValue)
                                     .font(SovaFont.mono(.caption2))
+                                    .foregroundStyle(.sovaPrimaryText)
                                     .lineLimit(1)
                             }
-                            .foregroundStyle(.sovaPrimaryText)
                             .frame(maxWidth: .infinity)
                         }
                     }
@@ -412,7 +413,7 @@ struct ContentView: View {
                 notes: "Uses 20x25x1 filters."
             ),
             MaintenanceItem(
-                title: "Kitchen Fridge",
+                title: "LG Fridge",
                 itemDescription: "Water filter schedule, model number, and repair notes.",
                 categoryRawValue: SovaCategory.appliance.rawValue,
                 locationName: "Kitchen",

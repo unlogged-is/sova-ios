@@ -298,6 +298,11 @@ struct WidgetView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
+
+                    // Prevent a single section from stretching the full width
+                    if overdueItems.isEmpty || dueSoonItems.isEmpty {
+                        Spacer(minLength: 0)
+                    }
                 }
                 Spacer(minLength: 0)
             }

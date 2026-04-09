@@ -5,6 +5,7 @@ struct ItemDetailView: View {
     let item: MaintenanceItem
     @Environment(\.dismiss) private var dismiss
     @State private var isPresentingEditSheet: Bool = false
+    @State private var selectedPhotoIndex: Int?
 
     private var categoryFields: [CategoryFieldDefinition] {
         CategoryFieldDefinition.fields(for: item.category)
@@ -65,6 +66,14 @@ struct ItemDetailView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
             .presentationContentInteraction(.scrolls)
+        }
+        .fullScreenCover(isPresented: Binding(
+            get: { selectedPhotoIndex != nil },
+            set: { if !$0 { selectedPhotoIndex = nil } }
+        )) {
+            if let index = selectedPhotoIndex {
+                PhotoViewerView(photos: item.photoData, initialIndex: index)
+            }
         }
     }
 
@@ -127,13 +136,17 @@ struct ItemDetailView: View {
             HStack(spacing: 12) {
                 ForEach(Array(item.photoData.enumerated()), id: \.offset) { index, data in
                     if let image: UIImage = UIImage(data: data) {
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 180, height: 150)
-                            .clipped()
-                            .clipShape(.rect(cornerRadius: 20))
-                            .accessibilityLabel("Photo \(index + 1) for \(item.title)")
+                        Button {
+                            selectedPhotoIndex = index
+                        } label: {
+                            Image(uiImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 180, height: 150)
+                                .clipped()
+                                .clipShape(.rect(cornerRadius: 20))
+                                .accessibilityLabel("Photo \(index + 1) for \(item.title)")
+                        }
                     }
                 }
             }
@@ -247,5 +260,47 @@ struct ItemDetailView: View {
         case .tracking:
             Color.sovaWarmAccent
         }
+    }
+}
+
+// MARK: - Full-Screen Photo Viewer
+
+private struct PhotoViewerView: View {
+    let photos: [Data]
+    let initialIndex: Int
+    @Environment(\.dismiss) private var dismiss
+    @State private var currentIndex: Int = 0
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            Color.black.ignoresSafeArea()
+
+            TabView(selection: $currentIndex) {
+                ForEach(Array(photos.enumerated()), id: \.offset) { index, data in
+                    if let image = UIImage(data: data) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .tag(index)
+                    }
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: photos.count > 1 ? .automatic : .never))
+
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 36, height: 36)
+                    .background(.white.opacity(0.2), in: .circle)
+            }
+            .padding(16)
+        }
+        .onAppear {
+            currentIndex = initialIndex
+        }
+        .statusBarHidden()
     }
 }

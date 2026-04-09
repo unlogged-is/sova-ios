@@ -18,6 +18,7 @@ struct AddItemView: View {
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var photoData: [Data] = []
     @State private var showDeleteConfirmation: Bool = false
+    @State private var showCamera: Bool = false
     @State private var coverPhotoIndex: Int?
 
     // Category-specific fields
@@ -73,8 +74,15 @@ struct AddItemView: View {
 
                 Section {
                     PhotosPicker(selection: $selectedPhotos, maxSelectionCount: 6, matching: .images) {
-                        Label("Add photos", systemImage: "photo.on.rectangle.angled")
+                        Label("Choose from library", systemImage: "photo.on.rectangle.angled")
                     }
+
+                    Button {
+                        showCamera = true
+                    } label: {
+                        Label("Take photo", systemImage: "camera")
+                    }
+                    .disabled(photoData.count >= 6)
 
                     if !photoData.isEmpty {
                         Text("Tap a photo to set it as the card icon")
@@ -217,6 +225,14 @@ struct AddItemView: View {
                 }
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
+            }
+            .fullScreenCover(isPresented: $showCamera) {
+                CameraPickerView { image in
+                    if let compressed = Self.compressPhoto(image.jpegData(compressionQuality: 1.0) ?? Data()) {
+                        photoData.append(compressed)
+                    }
+                }
+                .ignoresSafeArea()
             }
         }
     }
@@ -464,5 +480,46 @@ struct AddItemView: View {
         }
 
         return resized.jpegData(compressionQuality: 0.8)
+    }
+}
+
+// MARK: - Camera Picker
+
+private struct CameraPickerView: UIViewControllerRepresentable {
+    @Environment(\.dismiss) private var dismiss
+    var onCapture: (UIImage) -> Void
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(dismiss: dismiss, onCapture: onCapture)
+    }
+
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let dismiss: DismissAction
+        let onCapture: (UIImage) -> Void
+
+        init(dismiss: DismissAction, onCapture: @escaping (UIImage) -> Void) {
+            self.dismiss = dismiss
+            self.onCapture = onCapture
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            if let image = info[.originalImage] as? UIImage {
+                onCapture(image)
+            }
+            dismiss()
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            dismiss()
+        }
     }
 }

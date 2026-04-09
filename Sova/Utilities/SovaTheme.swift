@@ -92,6 +92,17 @@ enum SovaFont {
     }
 }
 
+extension SovaCategory {
+    var tintColor: Color {
+        switch tintName {
+        case "accentPrimary": .sovaPrimaryAccent
+        case "accentWarm": .sovaWarmAccent
+        case "dueSoon": .sovaDueSoon
+        default: .sovaSecondaryText
+        }
+    }
+}
+
 private extension Font.TextStyle {
     var defaultPointSize: CGFloat {
         switch self {
