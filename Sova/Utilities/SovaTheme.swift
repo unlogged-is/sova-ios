@@ -8,6 +8,7 @@ enum SovaTheme {
     static let accentPrimary: Color = Color(hex: 0x4A5C45)
     static let accentWarm: Color = Color(hex: 0xA0735A)
     static let dueSoon: Color = Color(hex: 0xC8923A)
+    static let overdue: Color = Color(hex: 0xC45534)
 
     static let darkBackground: Color = Color(hex: 0x211D19)
     static let darkTextPrimary: Color = Color(hex: 0xF4EEE4)
@@ -16,6 +17,7 @@ enum SovaTheme {
     static let darkAccentPrimary: Color = Color(hex: 0x7F9676)
     static let darkAccentWarm: Color = Color(hex: 0xC0937B)
     static let darkDueSoon: Color = Color(hex: 0xD6A64C)
+    static let darkOverdue: Color = Color(hex: 0xD46852)
 }
 
 extension Color {
@@ -57,6 +59,10 @@ extension ShapeStyle where Self == Color {
 
     static var sovaDueSoon: Color {
         Color(light: SovaTheme.dueSoon, dark: SovaTheme.darkDueSoon)
+    }
+
+    static var sovaOverdue: Color {
+        Color(light: SovaTheme.overdue, dark: SovaTheme.darkOverdue)
     }
 }
 

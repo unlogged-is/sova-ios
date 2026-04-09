@@ -5,6 +5,7 @@ struct ItemDetailView: View {
     let item: MaintenanceItem
     @Environment(\.dismiss) private var dismiss
     @State private var isPresentingEditSheet: Bool = false
+    @State private var isPresentingServiceSheet: Bool = false
     @State private var selectedPhotoIndex: Int?
 
     private var categoryFields: [CategoryFieldDefinition] {
@@ -48,6 +49,9 @@ struct ItemDetailView: View {
             .padding(.vertical, 20)
         }
         .background(.sovaBackground)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            floatingServiceButton
+        }
         .navigationTitle(item.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -66,6 +70,12 @@ struct ItemDetailView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
             .presentationContentInteraction(.scrolls)
+        }
+        .sheet(isPresented: $isPresentingServiceSheet) {
+            LogServiceView(item: item)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .presentationContentInteraction(.scrolls)
         }
         .fullScreenCover(isPresented: Binding(
             get: { selectedPhotoIndex != nil },
@@ -93,18 +103,41 @@ struct ItemDetailView: View {
                     .foregroundStyle(statusColor)
             }
 
-            Text(item.itemDescription)
-                .font(SovaFont.body(.body))
-                .foregroundStyle(.sovaPrimaryText)
+            if !item.itemDescription.isEmpty {
+                Text(item.itemDescription)
+                    .font(SovaFont.body(.body))
+                    .foregroundStyle(.sovaPrimaryText)
+            }
 
             VStack(alignment: .leading, spacing: 8) {
-                detailRow(title: "Next due", value: item.nextDueLabel)
+                detailRow(title: "Next service", value: item.nextUpcomingServiceLabel)
                 detailRow(title: "Last service", value: item.lastServiceDate?.formatted(date: .abbreviated, time: .omitted) ?? "Not logged")
                 detailRow(title: "Location", value: item.locationName ?? "Not set")
             }
         }
         .padding(20)
         .background(.sovaSurface, in: .rect(cornerRadius: 28))
+    }
+
+    private var floatingServiceButton: some View {
+        Button {
+            isPresentingServiceSheet = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "wrench.and.screwdriver")
+                    .font(.body.weight(.medium))
+                Text("Log Service")
+                    .font(SovaFont.body(.body, weight: .semibold))
+            }
+            .padding(.horizontal, 28)
+            .padding(.vertical, 14)
+            .foregroundStyle(.white)
+            .background(Color.sovaPrimaryAccent, in: .capsule)
+            .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .padding(.bottom, 8)
     }
 
     private var detailGrid: some View {
@@ -242,7 +275,9 @@ struct ItemDetailView: View {
 
     private func reminderStatusColor(_ status: MaintenanceStatus) -> Color {
         switch status {
-        case .overdue, .dueSoon:
+        case .overdue:
+            Color.sovaOverdue
+        case .dueSoon:
             Color.sovaDueSoon
         case .scheduled:
             Color.sovaPrimaryAccent
@@ -253,7 +288,9 @@ struct ItemDetailView: View {
 
     private var statusColor: Color {
         switch item.status {
-        case .overdue, .dueSoon:
+        case .overdue:
+            Color.sovaOverdue
+        case .dueSoon:
             Color.sovaDueSoon
         case .scheduled:
             Color.sovaPrimaryAccent

@@ -44,12 +44,12 @@ struct ContentView: View {
 
     private var overdueItems: [MaintenanceItem] {
         filteredItems.filter { $0.status == .overdue }
-            .sorted { ($0.nextDueDate ?? .distantFuture) < ($1.nextDueDate ?? .distantFuture) }
+            .sorted { ($0.earliestDueDate ?? .distantFuture) < ($1.earliestDueDate ?? .distantFuture) }
     }
 
     private var comingDueItems: [MaintenanceItem] {
         filteredItems.filter { $0.status == .dueSoon }
-            .sorted { ($0.nextDueDate ?? .distantFuture) < ($1.nextDueDate ?? .distantFuture) }
+            .sorted { ($0.earliestDueDate ?? .distantFuture) < ($1.earliestDueDate ?? .distantFuture) }
     }
 
     private var recentlyUpdatedItems: [MaintenanceItem] {
@@ -145,6 +145,25 @@ struct ContentView: View {
                 SettingsView()
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
+            }
+            .onOpenURL { url in
+                guard url.scheme == "sova",
+                      url.host == "item",
+                      let idString = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                          .queryItems?.first(where: { $0.name == "id" })?.value
+                else { return }
+                // Decode base64url back to standard base64
+                var base64 = idString
+                    .replacingOccurrences(of: "-", with: "+")
+                    .replacingOccurrences(of: "_", with: "/")
+                let remainder = base64.count % 4
+                if remainder > 0 {
+                    base64 += String(repeating: "=", count: 4 - remainder)
+                }
+                guard let data = Data(base64Encoded: base64),
+                      let identifier = try? JSONDecoder().decode(PersistentIdentifier.self, from: data)
+                else { return }
+                path = [.detail(identifier)]
             }
             .task {
                 seedIfNeeded()
@@ -388,46 +407,120 @@ struct ContentView: View {
 
     private func seedIfNeeded() {
         guard items.isEmpty else { return }
+        let cal = Calendar.current
 
-        let samples: [MaintenanceItem] = [
-            MaintenanceItem(
-                title: "Subaru Outback",
-                itemDescription: "Oil, tires, registration, and seasonal service history.",
-                categoryRawValue: SovaCategory.car.rawValue,
-                locationName: "Garage",
-                purchaseDate: Calendar.current.date(byAdding: .year, value: -2, to: .now),
-                lastServiceDate: Calendar.current.date(byAdding: .month, value: -5, to: .now),
-                nextDueDate: Calendar.current.date(byAdding: .day, value: 12, to: .now),
-                serviceIntervalMonths: 6,
-                notes: "Keep the winter tire torque note here."
-            ),
-            MaintenanceItem(
-                title: "Upstairs HVAC",
-                itemDescription: "Filter swaps, tune-ups, and warranty notes.",
-                categoryRawValue: SovaCategory.hvac.rawValue,
-                locationName: "Hall closet",
-                purchaseDate: Calendar.current.date(byAdding: .year, value: -4, to: .now),
-                lastServiceDate: Calendar.current.date(byAdding: .month, value: -2, to: .now),
-                nextDueDate: Calendar.current.date(byAdding: .day, value: 27, to: .now),
-                serviceIntervalMonths: 3,
-                notes: "Uses 20x25x1 filters."
-            ),
-            MaintenanceItem(
-                title: "LG Fridge",
-                itemDescription: "Water filter schedule, model number, and repair notes.",
-                categoryRawValue: SovaCategory.appliance.rawValue,
-                locationName: "Kitchen",
-                purchaseDate: Calendar.current.date(byAdding: .year, value: -1, to: .now),
-                lastServiceDate: Calendar.current.date(byAdding: .month, value: -4, to: .now),
-                nextDueDate: Calendar.current.date(byAdding: .month, value: 2, to: .now),
-                serviceIntervalMonths: 6,
-                notes: "Order filter before holiday hosting."
-            )
+        // --- Car: 2022 Subaru Outback (OVERDUE) ---
+        let car = MaintenanceItem(
+            title: "2022 Subaru Outback",
+            itemDescription: "",
+            categoryRawValue: SovaCategory.car.rawValue,
+            locationName: "Garage",
+            purchaseDate: cal.date(byAdding: .year, value: -3, to: .now),
+            lastServiceDate: cal.date(byAdding: .month, value: -7, to: .now),
+            notes: "Winter tires torqued to 89 ft-lbs."
+        )
+        car.customFields = [
+            "make": "Subaru",
+            "model": "Outback",
+            "year": "2022",
+            "mileage": "38400"
         ]
+        modelContext.insert(car)
 
-        for item in samples {
-            modelContext.insert(item)
-        }
+        let oilChange = ItemReminder(
+            name: "Oil Change",
+            nextDueDate: cal.date(byAdding: .day, value: -5, to: .now),
+            intervalMonths: 6,
+            lastServiceDate: cal.date(byAdding: .month, value: -7, to: .now),
+            item: car
+        )
+        let tireRotation = ItemReminder(
+            name: "Tire Rotation",
+            nextDueDate: cal.date(byAdding: .month, value: 2, to: .now),
+            intervalMonths: 6,
+            lastServiceDate: cal.date(byAdding: .month, value: -4, to: .now),
+            item: car
+        )
+        let inspection = ItemReminder(
+            name: "Inspection",
+            nextDueDate: cal.date(byAdding: .month, value: 8, to: .now),
+            intervalMonths: 12,
+            lastServiceDate: cal.date(byAdding: .month, value: -4, to: .now),
+            item: car
+        )
+        modelContext.insert(oilChange)
+        modelContext.insert(tireRotation)
+        modelContext.insert(inspection)
+        car.nextDueDate = oilChange.nextDueDate
+
+        // --- HVAC: Upstairs unit (DUE SOON) ---
+        let hvac = MaintenanceItem(
+            title: "Upstairs HVAC",
+            itemDescription: "",
+            categoryRawValue: SovaCategory.hvac.rawValue,
+            locationName: "Hall closet",
+            purchaseDate: cal.date(byAdding: .year, value: -4, to: .now),
+            lastServiceDate: cal.date(byAdding: .month, value: -2, to: .now),
+            notes: "Uses 20x25x1 filters. Buy in bulk from Amazon."
+        )
+        hvac.customFields = [
+            "systemType": "Central Air",
+            "filterSize": "20x25x1",
+            "seerRating": "16"
+        ]
+        modelContext.insert(hvac)
+
+        let filterChange = ItemReminder(
+            name: "Filter Change",
+            nextDueDate: cal.date(byAdding: .day, value: 10, to: .now),
+            intervalMonths: 3,
+            lastServiceDate: cal.date(byAdding: .month, value: -2, to: .now),
+            item: hvac
+        )
+        let hvacInspection = ItemReminder(
+            name: "Inspection",
+            nextDueDate: cal.date(byAdding: .month, value: 5, to: .now),
+            intervalMonths: 12,
+            lastServiceDate: cal.date(byAdding: .month, value: -7, to: .now),
+            item: hvac
+        )
+        modelContext.insert(filterChange)
+        modelContext.insert(hvacInspection)
+        hvac.nextDueDate = filterChange.nextDueDate
+
+        // --- Appliance: LG Fridge (SCHEDULED — not due soon) ---
+        let fridge = MaintenanceItem(
+            title: "LG Fridge",
+            itemDescription: "",
+            categoryRawValue: SovaCategory.appliance.rawValue,
+            locationName: "Kitchen",
+            purchaseDate: cal.date(byAdding: .year, value: -1, to: .now),
+            lastServiceDate: cal.date(byAdding: .month, value: -1, to: .now),
+            notes: "Order filter before holiday hosting."
+        )
+        fridge.customFields = [
+            "brand": "LG",
+            "modelNumber": "LRMVS3006S"
+        ]
+        modelContext.insert(fridge)
+
+        let fridgeFilter = ItemReminder(
+            name: "Filter Replacement",
+            nextDueDate: cal.date(byAdding: .month, value: 5, to: .now),
+            intervalMonths: 6,
+            lastServiceDate: cal.date(byAdding: .month, value: -1, to: .now),
+            item: fridge
+        )
+        let fridgeCleaning = ItemReminder(
+            name: "Cleaning",
+            nextDueDate: cal.date(byAdding: .month, value: 2, to: .now),
+            intervalMonths: 3,
+            lastServiceDate: cal.date(byAdding: .month, value: -1, to: .now),
+            item: fridge
+        )
+        modelContext.insert(fridgeFilter)
+        modelContext.insert(fridgeCleaning)
+        fridge.nextDueDate = fridgeCleaning.nextDueDate
     }
 }
 
@@ -436,7 +529,7 @@ private struct DueItemRow: View {
     var isOverdue: Bool = false
 
     private var accentColor: Color {
-        isOverdue ? .red : .sovaDueSoon
+        isOverdue ? .sovaOverdue : .sovaDueSoon
     }
 
     var body: some View {
@@ -452,9 +545,10 @@ private struct DueItemRow: View {
                     .font(SovaFont.title(.title3))
                     .foregroundStyle(.sovaPrimaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Text(item.nextDueLabel)
+                Text(item.nextUpcomingServiceLabel)
                     .font(SovaFont.mono(.caption))
                     .foregroundStyle(.sovaSecondaryText)
+                    .lineLimit(1)
             }
 
             Image(systemName: "chevron.right")
@@ -469,19 +563,56 @@ private struct DueItemRow: View {
 private struct InventoryCard: View {
     let item: MaintenanceItem
 
+    private var subtitle: String {
+        let fields = item.customFields
+        switch item.category {
+        case .car:
+            if let mileage = fields["mileage"], !mileage.isEmpty {
+                return "\(mileage) mi"
+            }
+        case .hvac:
+            let parts = [fields["systemType"], fields["filterSize"]]
+                .compactMap { $0?.isEmpty == false ? $0 : nil }
+            if !parts.isEmpty { return parts.joined(separator: " · ") }
+        case .appliance:
+            let parts = [fields["brand"], fields["modelNumber"]]
+                .compactMap { $0?.isEmpty == false ? $0 : nil }
+            if !parts.isEmpty { return parts.joined(separator: " · ") }
+        default:
+            break
+        }
+        if !item.itemDescription.isEmpty { return item.itemDescription }
+        return item.category.rawValue
+    }
+
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
-            VStack(alignment: .leading, spacing: 6) {
+        HStack(alignment: .center, spacing: 14) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text(item.title)
                     .font(SovaFont.title(.title3))
                     .foregroundStyle(.sovaPrimaryText)
-                Text(item.itemDescription)
+                    .lineLimit(1)
+
+                Text(subtitle)
                     .font(SovaFont.body(.subheadline))
                     .foregroundStyle(.sovaSecondaryText)
-                    .lineLimit(2)
+                    .lineLimit(1)
+
+                Label(item.nextUpcomingServiceLabel, systemImage: "clock")
+                    .font(SovaFont.mono(.caption))
+                    .foregroundStyle(.sovaSecondaryText)
+                    .lineLimit(1)
+
                 HStack(spacing: 8) {
                     Label(item.category.rawValue, systemImage: item.category.symbolName)
-                    Text(item.nextDueLabel)
+                    let reminderCount = item.activeReminders.count
+                    if reminderCount > 0 {
+                        Text("·")
+                        Label(
+                            "\(reminderCount) reminder\(reminderCount == 1 ? "" : "s")",
+                            systemImage: "bell"
+                        )
+                    }
                 }
                 .font(SovaFont.mono(.caption))
                 .foregroundStyle(.sovaSecondaryText)
@@ -516,7 +647,9 @@ private struct InventoryCard: View {
 
     private var statusColor: Color {
         switch item.status {
-        case .overdue, .dueSoon:
+        case .overdue:
+            Color.sovaOverdue
+        case .dueSoon:
             Color.sovaDueSoon
         case .scheduled:
             Color.sovaPrimaryAccent

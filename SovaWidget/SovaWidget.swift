@@ -51,8 +51,10 @@ nonisolated struct SovaWidgetItem: Codable, Sendable {
     let title: String
     let category: String
     let categorySymbol: String
+    let serviceName: String
     let dueText: String
     let isOverdue: Bool
+    let itemID: String
 }
 
 nonisolated struct SovaWidgetSnapshot: Codable, Sendable {
@@ -185,11 +187,16 @@ struct WidgetView: View {
         switch widgetFamily {
         case .systemSmall:
             smallView
+                .widgetURL(entry.snapshot.items.first.flatMap { itemURL(for: $0) })
         case .systemLarge:
             largeView
         default:
             mediumView
         }
+    }
+
+    private func itemURL(for item: SovaWidgetItem) -> URL? {
+        URL(string: "sova://item?id=\(item.itemID)")
     }
 
     // MARK: - Small
@@ -282,7 +289,9 @@ struct WidgetView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             sectionHeader(title: "Overdue", count: overdueItems.count, color: palette.accentRed)
                             ForEach(Array(overdueItems.prefix(2).enumerated()), id: \.offset) { _, item in
-                                compactItemRow(item: item, accent: palette.accentRed)
+                                Link(destination: itemURL(for: item) ?? URL(string: "sova://")!) {
+                                    compactItemRow(item: item, accent: palette.accentRed)
+                                }
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -293,7 +302,9 @@ struct WidgetView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             sectionHeader(title: "Coming due", count: dueSoonItems.count, color: palette.accentGold)
                             ForEach(Array(dueSoonItems.prefix(2).enumerated()), id: \.offset) { _, item in
-                                compactItemRow(item: item, accent: palette.accentGold)
+                                Link(destination: itemURL(for: item) ?? URL(string: "sova://")!) {
+                                    compactItemRow(item: item, accent: palette.accentGold)
+                                }
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -358,7 +369,9 @@ struct WidgetView: View {
                     .padding(.bottom, 8)
 
                     ForEach(Array(overdueItems.prefix(3).enumerated()), id: \.offset) { _, item in
-                        itemRow(item: item, accent: palette.accentRed)
+                        Link(destination: itemURL(for: item) ?? URL(string: "sova://")!) {
+                            itemRow(item: item, accent: palette.accentRed)
+                        }
                     }
 
                     if !dueSoonItems.isEmpty {
@@ -377,7 +390,9 @@ struct WidgetView: View {
 
                     let maxDueSoon = overdueItems.isEmpty ? 5 : (overdueItems.count <= 2 ? 3 : 2)
                     ForEach(Array(dueSoonItems.prefix(maxDueSoon).enumerated()), id: \.offset) { _, item in
-                        itemRow(item: item, accent: palette.accentGold)
+                        Link(destination: itemURL(for: item) ?? URL(string: "sova://")!) {
+                            itemRow(item: item, accent: palette.accentGold)
+                        }
                     }
                 }
 
@@ -413,10 +428,17 @@ struct WidgetView: View {
                     .font(.system(.caption, design: .default, weight: .medium))
                     .foregroundStyle(palette.textPrimary)
                     .lineLimit(1)
-                Text(item.dueText)
-                    .font(.system(.caption2, design: .monospaced))
-                    .foregroundStyle(palette.textSecondary)
-                    .lineLimit(1)
+                if !item.serviceName.isEmpty {
+                    Text("\(item.serviceName) · \(item.dueText)")
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundStyle(palette.textSecondary)
+                        .lineLimit(1)
+                } else {
+                    Text(item.dueText)
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundStyle(palette.textSecondary)
+                        .lineLimit(1)
+                }
             }
 
             Spacer(minLength: 0)
@@ -440,10 +462,17 @@ struct WidgetView: View {
                     .font(.system(.subheadline, design: .default, weight: .medium))
                     .foregroundStyle(palette.textPrimary)
                     .lineLimit(1)
-                Text("\(item.category) · \(item.dueText)")
-                    .font(.system(.caption2, design: .monospaced))
-                    .foregroundStyle(palette.textSecondary)
-                    .lineLimit(1)
+                if !item.serviceName.isEmpty {
+                    Text("\(item.serviceName) · \(item.dueText)")
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundStyle(palette.textSecondary)
+                        .lineLimit(1)
+                } else {
+                    Text(item.dueText)
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundStyle(palette.textSecondary)
+                        .lineLimit(1)
+                }
             }
 
             Spacer(minLength: 0)

@@ -1,12 +1,15 @@
 import Foundation
+import SwiftData
 import WidgetKit
 
 nonisolated struct SovaWidgetItem: Codable, Sendable {
     let title: String
     let category: String
     let categorySymbol: String
+    let serviceName: String
     let dueText: String
     let isOverdue: Bool
+    let itemID: String
 }
 
 nonisolated struct SovaWidgetSnapshot: Codable, Sendable {
@@ -48,13 +51,21 @@ enum SovaWidgetStore {
         let dueSoonItems = actionableItems.filter { $0.status == .dueSoon }
 
         let nextItem: MaintenanceItem? = actionableItems.first
+        let idEncoder = JSONEncoder()
         let widgetItems: [SovaWidgetItem] = actionableItems.prefix(8).map { item in
-            SovaWidgetItem(
+            let idData = (try? idEncoder.encode(item.persistentModelID)) ?? Data()
+            let idString = idData.base64EncodedString()
+                .replacingOccurrences(of: "+", with: "-")
+                .replacingOccurrences(of: "/", with: "_")
+                .replacingOccurrences(of: "=", with: "")
+            return SovaWidgetItem(
                 title: item.title,
                 category: item.category.rawValue,
                 categorySymbol: item.category.symbolName,
+                serviceName: item.nextUpcomingReminder?.name ?? "",
                 dueText: item.nextDueLabel,
-                isOverdue: item.status == .overdue
+                isOverdue: item.status == .overdue,
+                itemID: idString
             )
         }
 

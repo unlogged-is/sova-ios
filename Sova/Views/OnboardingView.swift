@@ -37,7 +37,7 @@ struct OnboardingView: View {
                 .font(.custom("CormorantGaramond-Italic", size: 64))
                 .foregroundStyle(.sovaWarmAccent)
 
-            Text("Things you own,\none place to care for them.")
+            Text("The things you own,\none place to care for them.")
                 .font(SovaFont.title(.title2))
                 .foregroundStyle(.sovaPrimaryText)
                 .multilineTextAlignment(.center)
@@ -80,7 +80,7 @@ struct OnboardingView: View {
                 featureRow(
                     icon: "icloud.fill",
                     title: "Synced everywhere",
-                    subtitle: "Your data backed up with iCloud"
+                    subtitle: "Your data backed up with iCloud, synced across devices"
                 )
             }
             .padding(.horizontal, 8)

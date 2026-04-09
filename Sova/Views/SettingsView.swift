@@ -35,16 +35,17 @@ struct SettingsView: View {
                             .foregroundStyle(.sovaPrimaryText)
                     }
 
-                    Toggle(isOn: $notificationsEnabled) {
-                        Label("Notifications", systemImage: "bell.badge")
-                            .font(SovaFont.body(.body))
-                            .foregroundStyle(.sovaPrimaryText)
-                    }
-                    .onChange(of: notificationsEnabled) { _, enabled in
-                        if enabled {
-                            NotificationManager.scheduleAllReminders(items: items)
-                        } else {
-                            NotificationManager.cancelAll()
+                    NavigationLink {
+                        NotificationSettingsView(items: items)
+                    } label: {
+                        HStack {
+                            Label("Notifications", systemImage: "bell.badge")
+                                .font(SovaFont.body(.body))
+                                .foregroundStyle(.sovaPrimaryText)
+                            Spacer()
+                            Text(notificationsEnabled ? "On" : "Off")
+                                .font(SovaFont.mono(.caption))
+                                .foregroundStyle(.sovaSecondaryText)
                         }
                     }
 
@@ -115,6 +116,129 @@ struct SettingsView: View {
         }
     }
 }
+
+// MARK: - Notification Settings
+
+private struct NotificationSettingsView: View {
+    let items: [MaintenanceItem]
+    @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = true
+    @AppStorage("notificationAdvanceDays") private var advanceDays: Int = 7
+    @AppStorage("notificationHour") private var notificationHour: Int = 9
+
+    private let advanceDayOptions = [1, 2, 3, 5, 7, 14]
+    private let hourRange = 6...21
+
+    private func hourLabel(_ hour: Int) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"
+        var components = DateComponents()
+        components.hour = hour
+        components.minute = 0
+        let date = Calendar.current.date(from: components) ?? .now
+        return formatter.string(from: date)
+    }
+
+    var body: some View {
+        List {
+            Section {
+                Toggle(isOn: $notificationsEnabled) {
+                    Label("Enable notifications", systemImage: "bell.badge")
+                        .font(SovaFont.body(.body))
+                        .foregroundStyle(.sovaPrimaryText)
+                }
+                .onChange(of: notificationsEnabled) { _, enabled in
+                    if enabled {
+                        NotificationManager.scheduleAllReminders(items: items)
+                    } else {
+                        NotificationManager.cancelAll()
+                    }
+                }
+            } header: {
+                Text("Notifications")
+                    .font(SovaFont.mono(.caption2))
+            }
+
+            if notificationsEnabled {
+                Section {
+                    Button {
+                        sendTestNotifications()
+                    } label: {
+                        Label("Send test notification", systemImage: "bell.and.waves.left.and.right")
+                            .font(SovaFont.body(.body))
+                            .foregroundStyle(.sovaPrimaryAccent)
+                    }
+                } header: {
+                    Text("Test")
+                        .font(SovaFont.mono(.caption2))
+                } footer: {
+                    Text("Sends two notifications: \"coming due\" in 5 seconds and \"due today\" in 10 seconds. Lock or background the app to see them.")
+                        .font(SovaFont.mono(.caption2))
+                }
+
+                Section {
+                    Picker(selection: $advanceDays) {
+                        ForEach(advanceDayOptions, id: \.self) { days in
+                            Text("\(days) day\(days == 1 ? "" : "s") before")
+                                .tag(days)
+                        }
+                    } label: {
+                        Label("Advance notice", systemImage: "calendar.badge.clock")
+                            .font(SovaFont.body(.body))
+                            .foregroundStyle(.sovaPrimaryText)
+                    }
+
+                    Picker(selection: $notificationHour) {
+                        ForEach(Array(hourRange), id: \.self) { hour in
+                            Text(hourLabel(hour)).tag(hour)
+                        }
+                    } label: {
+                        Label("Time of day", systemImage: "clock")
+                            .font(SovaFont.body(.body))
+                            .foregroundStyle(.sovaPrimaryText)
+                    }
+                } header: {
+                    Text("Timing")
+                        .font(SovaFont.mono(.caption2))
+                } footer: {
+                    Text("You'll receive a reminder \(advanceDays) day\(advanceDays == 1 ? "" : "s") before each service is due, and again on the due date. Both notifications arrive at \(hourLabel(notificationHour)).")
+                        .font(SovaFont.mono(.caption2))
+                }
+                .onChange(of: advanceDays) { _, _ in
+                    NotificationManager.scheduleAllReminders(items: items)
+                }
+                .onChange(of: notificationHour) { _, _ in
+                    NotificationManager.scheduleAllReminders(items: items)
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(.sovaBackground)
+        .navigationTitle("Notifications")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func sendTestNotifications() {
+        let center = UNUserNotificationCenter.current()
+
+        // "Coming due" — fires in 5 seconds
+        let advanceContent = UNMutableNotificationContent()
+        advanceContent.title = "2022 Subaru Outback"
+        advanceContent.body = "Oil Change is due in \(advanceDays) day\(advanceDays == 1 ? "" : "s")"
+        advanceContent.sound = .default
+        let advanceTrigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
+        center.add(UNNotificationRequest(identifier: "sova-test-advance", content: advanceContent, trigger: advanceTrigger))
+
+        // "Due today" — fires in 10 seconds
+        let dueContent = UNMutableNotificationContent()
+        dueContent.title = "2022 Subaru Outback"
+        dueContent.body = "Oil Change is due today"
+        dueContent.sound = .default
+        let dueTrigger = UNTimeIntervalNotificationTrigger(timeInterval: 10, repeats: false)
+        center.add(UNNotificationRequest(identifier: "sova-test-due", content: dueContent, trigger: dueTrigger))
+    }
+}
+
+// MARK: - Category Visibility
 
 private struct CategoryVisibilityView: View {
     @Binding var hiddenCategoriesRaw: String

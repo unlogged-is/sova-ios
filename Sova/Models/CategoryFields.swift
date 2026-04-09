@@ -80,6 +80,37 @@ struct CategoryFieldDefinition: Identifiable {
     }
 }
 
+// MARK: - Service Suggestions per Category
+
+extension SovaCategory {
+    /// Common service/maintenance actions for this category
+    var serviceSuggestions: [String] {
+        switch self {
+        case .car:
+            ["Oil Change", "Tire Rotation", "Brake Service", "Transmission Service",
+             "Coolant Flush", "Air Filter", "Battery Replacement", "Inspection", "Car Wash"]
+        case .appliance:
+            ["Cleaning", "Filter Replacement", "Inspection", "Repair", "Descaling"]
+        case .hvac:
+            ["Filter Change", "Inspection", "Coil Cleaning", "Refrigerant Check", "Duct Cleaning"]
+        case .roof:
+            ["Inspection", "Gutter Cleaning", "Repair", "Moss Treatment", "Sealant"]
+        case .bike:
+            ["Tune-up", "Tire Change", "Chain Lube", "Brake Adjustment", "Cable Replacement"]
+        case .home:
+            ["Cleaning", "Repair", "Painting", "Inspection", "Pest Control"]
+        case .garden:
+            ["Watering", "Pruning", "Fertilizing", "Pest Treatment", "Mulching"]
+        case .warranty:
+            ["Claim Filed", "Renewal"]
+        case .receipt:
+            ["Return", "Exchange"]
+        case .other:
+            ["General Service", "Inspection", "Repair"]
+        }
+    }
+}
+
 // MARK: - Reminder Draft (for form editing)
 
 struct ReminderDraft: Identifiable {

@@ -18,6 +18,7 @@ struct AddItemView: View {
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var photoData: [Data] = []
     @State private var showDeleteConfirmation: Bool = false
+    @State private var showDiscardConfirmation: Bool = false
     @State private var showCamera: Bool = false
     @State private var coverPhotoIndex: Int?
 
@@ -37,15 +38,48 @@ struct AddItemView: View {
         CategoryFieldDefinition.fields(for: category)
     }
 
+    /// Categories that auto-generate their title from custom fields
+    private var categoryAutoGeneratesTitle: Bool {
+        category == .car
+    }
+
+    /// Auto-generated title built from category-specific fields
+    private var generatedTitle: String {
+        switch category {
+        case .car:
+            let year = customFieldValues["year"]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let make = customFieldValues["make"]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let model = customFieldValues["model"]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return [year, make, model].filter { !$0.isEmpty }.joined(separator: " ")
+        default:
+            return ""
+        }
+    }
+
+    /// The effective title used for saving — either user-entered or auto-generated
+    private var effectiveTitle: String {
+        categoryAutoGeneratesTitle ? generatedTitle : title
+    }
+
+    /// Whether any fields have been filled in (for discard confirmation)
+    private var hasUnsavedChanges: Bool {
+        if !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
+        if !locationName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
+        if !notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
+        if !photoData.isEmpty { return true }
+        if !reminderDrafts.isEmpty { return true }
+        if customFieldValues.values.contains(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) { return true }
+        return false
+    }
+
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Item name", text: $title)
-                        .font(SovaFont.body(.body))
-                    TextField("What are you tracking?", text: $itemDescription, axis: .vertical)
-                        .font(SovaFont.body(.body))
-                        .lineLimit(2...4)
+                    if !categoryAutoGeneratesTitle {
+                        TextField("Item name", text: $title)
+                            .font(SovaFont.body(.body))
+                    }
                     Picker("Category", selection: $category) {
                         ForEach(SovaCategory.allCases) { category in
                             Label(category.rawValue, systemImage: category.symbolName)
@@ -154,14 +188,18 @@ struct AddItemView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
-                        dismiss()
+                        if !isEditing && hasUnsavedChanges {
+                            showDiscardConfirmation = true
+                        } else {
+                            dismiss()
+                        }
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         save()
                     }
-                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(effectiveTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
             .alert(
@@ -180,6 +218,18 @@ struct AddItemView: View {
             } message: {
                 Text("This item and all its photos will be permanently removed.")
             }
+            .alert(
+                "Discard changes?",
+                isPresented: $showDiscardConfirmation
+            ) {
+                Button("Discard", role: .destructive) {
+                    dismiss()
+                }
+                Button("Keep Editing", role: .cancel) {}
+            } message: {
+                Text("You have unsaved changes that will be lost.")
+            }
+            .interactiveDismissDisabled(!isEditing && hasUnsavedChanges)
             .onAppear {
                 if itemToEdit == nil {
                     category = initialCategory
@@ -326,7 +376,7 @@ struct AddItemView: View {
     // MARK: - Save
 
     private func save() {
-        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedTitle = effectiveTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedDescription = itemDescription.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
 

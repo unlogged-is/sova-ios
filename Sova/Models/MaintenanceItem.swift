@@ -83,6 +83,22 @@ final class MaintenanceItem {
         (reminders ?? []).filter { !$0.isComplete }
     }
 
+    /// The soonest-due active reminder, if any
+    var nextUpcomingReminder: ItemReminder? {
+        activeReminders
+            .filter { $0.nextDueDate != nil }
+            .sorted { ($0.nextDueDate ?? .distantFuture) < ($1.nextDueDate ?? .distantFuture) }
+            .first
+    }
+
+    /// Earliest due date across all active reminders (or the item-level fallback)
+    var earliestDueDate: Date? {
+        if let upcoming = nextUpcomingReminder?.nextDueDate {
+            return upcoming
+        }
+        return nextDueDate
+    }
+
     var status: MaintenanceStatus {
         let active = activeReminders
         if !active.isEmpty {
@@ -104,15 +120,21 @@ final class MaintenanceItem {
         return .scheduled
     }
 
-    var nextDueLabel: String {
-        let active = activeReminders
-        if !active.isEmpty {
-            let earliest = active.compactMap(\.nextDueDate).sorted().first
-            guard let earliest else { return "No due date" }
-            return earliest.formatted(date: .abbreviated, time: .omitted)
+    /// A label like "Oil Change — Apr 15, 2026" for the next upcoming service
+    var nextUpcomingServiceLabel: String {
+        if let reminder = nextUpcomingReminder, let date = reminder.nextDueDate {
+            return "\(reminder.name) — \(date.formatted(date: .abbreviated, time: .omitted))"
         }
-        guard let nextDueDate else { return "No due date" }
+        guard let nextDueDate else { return "No upcoming service" }
         return nextDueDate.formatted(date: .abbreviated, time: .omitted)
+    }
+
+    /// Just the date portion for the next due service
+    var nextDueLabel: String {
+        if let date = earliestDueDate {
+            return date.formatted(date: .abbreviated, time: .omitted)
+        }
+        return "No due date"
     }
 }
 
