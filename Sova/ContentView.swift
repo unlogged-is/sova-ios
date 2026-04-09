@@ -121,12 +121,18 @@ struct ContentView: View {
                 SovaBottomBar(
                     selectedCategory: $selectedCategory,
                     hiddenCategories: hiddenCategorySet,
+                    isPickerOpen: showCategoryPicker,
                     onAddTapped: {
                         withAnimation(.spring(duration: 0.35, bounce: 0.2)) {
-                            showCategoryPicker = true
+                            showCategoryPicker.toggle()
                         }
                     },
-                    onSettingsTapped: { isPresentingSettingsSheet = true }
+                    onSettingsTapped: { isPresentingSettingsSheet = true },
+                    onDismissPicker: {
+                        withAnimation(.spring(duration: 0.35, bounce: 0.2)) {
+                            showCategoryPicker = false
+                        }
+                    }
                 )
             }
             .sheet(item: $selectedNewCategory) { category in
@@ -204,10 +210,10 @@ struct ContentView: View {
                     }
                 }
             }
-            .padding(24)
-            .background(.sovaSurface, in: .rect(cornerRadius: 28))
-            .padding(.horizontal, 24)
-            .padding(.bottom, 100)
+            .padding(20)
+            .modifier(GlassPickerBackgroundModifier())
+            .padding(.horizontal, 40)
+            .padding(.bottom, 30)
             .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
@@ -601,6 +607,18 @@ private struct SwipeToDeleteCard: View {
         offset = 0
         if activeSwipeID == item.persistentModelID {
             activeSwipeID = nil
+        }
+    }
+}
+
+private struct GlassPickerBackgroundModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(.regular, in: .rect(cornerRadius: 28))
+        } else {
+            content
+                .background(.sovaSurface, in: .rect(cornerRadius: 28))
         }
     }
 }

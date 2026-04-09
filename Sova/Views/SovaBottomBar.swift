@@ -3,8 +3,10 @@ import SwiftUI
 struct SovaBottomBar: View {
     @Binding var selectedCategory: SovaCategory?
     var hiddenCategories: Set<String> = []
+    var isPickerOpen: Bool = false
     var onAddTapped: () -> Void
     var onSettingsTapped: () -> Void
+    var onDismissPicker: (() -> Void)? = nil
 
     private var visibleCategories: [SovaCategory] {
         SovaCategory.allCases.filter { !hiddenCategories.contains($0.rawValue) }
@@ -41,12 +43,16 @@ struct SovaBottomBar: View {
                 Image(systemName: "plus")
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.white)
+                    .rotationEffect(.degrees(isPickerOpen ? 45 : 0))
                     .frame(width: 44, height: 44)
                     .modifier(GlassCircleButtonModifier())
             }
-            .accessibilityLabel("Add item")
+            .accessibilityLabel(isPickerOpen ? "Close" : "Add item")
 
-            Button(action: onSettingsTapped) {
+            Button {
+                onDismissPicker?()
+                onSettingsTapped()
+            } label: {
                 VStack(spacing: 4) {
                     Image(systemName: "gearshape")
                         .font(.title3)
@@ -59,6 +65,9 @@ struct SovaBottomBar: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
+        .onChange(of: selectedCategory) { _, _ in
+            onDismissPicker?()
+        }
         .modifier(GlassBarBackgroundModifier())
         .padding(.horizontal, 40)
     }
