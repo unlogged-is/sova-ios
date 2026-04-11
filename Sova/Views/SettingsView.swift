@@ -8,6 +8,7 @@ struct SettingsView: View {
     @AppStorage("swipeToDeleteEnabled") private var swipeToDeleteEnabled: Bool = true
     @AppStorage("hiddenCategories") private var hiddenCategoriesRaw: String = ""
     @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = true
+    @AppStorage("usesMetricUnits") private var usesMetricUnits: Bool = false
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -72,8 +73,17 @@ struct SettingsView: View {
                             .font(SovaFont.body(.body))
                             .foregroundStyle(.sovaPrimaryText)
                     }
+
+                    Picker(selection: $usesMetricUnits) {
+                        Text("Imperial (mi)").tag(false)
+                        Text("Metric (km)").tag(true)
+                    } label: {
+                        Label("Units", systemImage: "ruler")
+                            .font(SovaFont.body(.body))
+                            .foregroundStyle(.sovaPrimaryText)
+                    }
                 } header: {
-                    Text("Theme")
+                    Text("Display")
                         .font(SovaFont.mono(.caption2))
                 }
 

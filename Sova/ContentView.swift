@@ -70,13 +70,15 @@ struct ContentView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
                     searchBar
-                    if searchText.isEmpty {
-                        if !overdueItems.isEmpty {
-                            overdueSection
+                    if !items.isEmpty {
+                        if searchText.isEmpty {
+                            if !overdueItems.isEmpty {
+                                overdueSection
+                            }
+                            comingDueSection
                         }
-                        comingDueSection
+                        inventorySection
                     }
-                    inventorySection
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 20)
@@ -376,10 +378,9 @@ struct ContentView: View {
                 }
             }
         }
-        .confirmationDialog(
+        .alert(
             "Delete \"\(itemToDelete?.title ?? "")\"?",
-            isPresented: $showDeleteConfirmation,
-            titleVisibility: .visible
+            isPresented: $showDeleteConfirmation
         ) {
             Button("Delete", role: .destructive) {
                 if let item = itemToDelete {
@@ -398,8 +399,8 @@ struct ContentView: View {
     private var quietCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Nothing urgent")
-                .font(SovaFont.body(.headline, weight: .semibold))
-                .foregroundStyle(.sovaPrimaryText)
+                .font(SovaFont.title(.headline))
+                .foregroundStyle(.sovaSecondaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)

@@ -11,6 +11,8 @@ struct LogServiceView: View {
     @State private var serviceDate: Date = .now
     @State private var serviceNotes: String = ""
     @State private var nextServiceDates: [String: Date] = [:]
+    @State private var updatedMileage: String = ""
+    @State private var serviceLocation: String = ""
 
     private var suggestions: [String] {
         item.category.serviceSuggestions
@@ -75,6 +77,39 @@ struct LogServiceView: View {
                         DatePicker("Service date", selection: $serviceDate, displayedComponents: .date)
                             .font(SovaFont.body(.body))
 
+                        if item.category == .car {
+                            HStack {
+                                Text("Current mileage")
+                                    .font(SovaFont.body(.body))
+                                    .foregroundStyle(.sovaPrimaryText)
+                                Spacer()
+                                TextField("e.g. 45000", text: $updatedMileage)
+                                    .font(SovaFont.body(.body))
+                                    .foregroundStyle(.sovaPrimaryText)
+                                    .keyboardType(.numberPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .frame(width: 130)
+                                    .background(.sovaSurface.opacity(0.5), in: .rect(cornerRadius: 10))
+                            }
+
+                            HStack {
+                                Text("Done at")
+                                    .font(SovaFont.body(.body))
+                                    .foregroundStyle(.sovaPrimaryText)
+                                Spacer()
+                                TextField("e.g. Jiffy Lube", text: $serviceLocation)
+                                    .font(SovaFont.body(.body))
+                                    .foregroundStyle(.sovaPrimaryText)
+                                    .multilineTextAlignment(.trailing)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .frame(width: 180)
+                                    .background(.sovaSurface.opacity(0.5), in: .rect(cornerRadius: 10))
+                            }
+                        }
+
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Notes")
                                 .font(SovaFont.mono(.caption))
@@ -118,6 +153,11 @@ struct LogServiceView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { logService() }
                         .disabled(resolvedServiceNames.isEmpty)
+                }
+            }
+            .onAppear {
+                if item.category == .car {
+                    updatedMileage = item.customFields["mileage"] ?? ""
                 }
             }
         }
@@ -226,6 +266,14 @@ struct LogServiceView: View {
         let dateString = serviceDate.formatted(date: .abbreviated, time: .omitted)
         let serviceList = names.joined(separator: ", ")
         var logEntry = "[\(dateString)] \(serviceList)"
+        let trimmedLocation = serviceLocation.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedLocation.isEmpty {
+            logEntry += " @ \(trimmedLocation)"
+        }
+        let trimmedMileage = updatedMileage.trimmingCharacters(in: .whitespacesAndNewlines)
+        if item.category == .car, !trimmedMileage.isEmpty {
+            logEntry += " \(trimmedMileage) mi"
+        }
         if !serviceNotes.isEmpty {
             logEntry += " — \(serviceNotes)"
         }
@@ -256,6 +304,16 @@ struct LogServiceView: View {
                     item: item
                 )
                 modelContext.insert(reminder)
+            }
+        }
+
+        // Update mileage for cars
+        if item.category == .car {
+            let trimmedMileage = updatedMileage.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmedMileage.isEmpty {
+                var fields = item.customFields
+                fields["mileage"] = trimmedMileage
+                item.customFields = fields
             }
         }
 
