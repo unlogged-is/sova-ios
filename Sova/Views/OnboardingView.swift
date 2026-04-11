@@ -15,17 +15,20 @@ struct OnboardingView: View {
     @AppStorage("usesMetricUnits") private var usesMetricUnits: Bool = false
 
     var body: some View {
-        ZStack {
-            Color.sovaBackground.ignoresSafeArea()
+        NavigationStack {
+            ZStack {
+                Color.sovaBackground.ignoresSafeArea()
 
-            TabView(selection: $currentPage) {
-                welcomePage.tag(0)
-                featuresPage.tag(1)
-                notificationsPage.tag(2)
-                addCarPage.tag(3)
+                TabView(selection: $currentPage) {
+                    welcomePage.tag(0)
+                    featuresPage.tag(1)
+                    notificationsPage.tag(2)
+                    addCarPage.tag(3)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .always))
+                .indexViewStyle(.page(backgroundDisplayMode: .always))
             }
-            .tabViewStyle(.page(indexDisplayMode: .always))
-            .indexViewStyle(.page(backgroundDisplayMode: .always))
+            .navigationBarHidden(true)
         }
     }
 
@@ -213,6 +216,15 @@ struct OnboardingView: View {
             }
             .padding(.horizontal, 8)
             .padding(.top, 8)
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+                    .font(SovaFont.body(.body, weight: .semibold))
+                }
+            }
 
             Spacer()
 
