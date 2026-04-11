@@ -128,7 +128,7 @@ struct LogServiceView: View {
     private func serviceChip(_ label: String) -> some View {
         let isSelected = selectedServices.contains(label)
         return Button {
-            withAnimation(.snappy(duration: 0.2)) {
+            withAnimation(SovaAccessibility.animation(.snappy(duration: 0.2))) {
                 if isSelected {
                     selectedServices.remove(label)
                     // Clean up next date entry

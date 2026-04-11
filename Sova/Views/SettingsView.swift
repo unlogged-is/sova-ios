@@ -49,6 +49,14 @@ struct SettingsView: View {
                         }
                     }
 
+                    NavigationLink {
+                        AccessibilitySettingsView()
+                    } label: {
+                        Label("Accessibility", systemImage: "accessibility")
+                            .font(SovaFont.body(.body))
+                            .foregroundStyle(.sovaPrimaryText)
+                    }
+
                 } header: {
                     Text("General")
                         .font(SovaFont.mono(.caption2))
@@ -235,6 +243,64 @@ private struct NotificationSettingsView: View {
         dueContent.sound = .default
         let dueTrigger = UNTimeIntervalNotificationTrigger(timeInterval: 10, repeats: false)
         center.add(UNNotificationRequest(identifier: "sova-test-due", content: dueContent, trigger: dueTrigger))
+    }
+}
+
+// MARK: - Accessibility Settings
+
+private struct AccessibilitySettingsView: View {
+    @AppStorage("useSystemFonts") private var useSystemFonts: Bool = false
+    @AppStorage("highContrastEnabled") private var highContrastEnabled: Bool = false
+    @AppStorage("reduceMotionEnabled") private var reduceMotionEnabled: Bool = false
+
+    var body: some View {
+        List {
+            Section {
+                Toggle(isOn: $useSystemFonts) {
+                    Label("Use system fonts", systemImage: "textformat.size")
+                        .font(SovaFont.body(.body))
+                        .foregroundStyle(.sovaPrimaryText)
+                }
+            } header: {
+                Text("Fonts")
+                    .font(SovaFont.mono(.caption2))
+            } footer: {
+                Text("Replaces custom fonts with the system font for improved readability at all sizes.")
+                    .font(SovaFont.mono(.caption2))
+            }
+
+            Section {
+                Toggle(isOn: $highContrastEnabled) {
+                    Label("High contrast", systemImage: "circle.lefthalf.striped.horizontal")
+                        .font(SovaFont.body(.body))
+                        .foregroundStyle(.sovaPrimaryText)
+                }
+            } header: {
+                Text("Display")
+                    .font(SovaFont.mono(.caption2))
+            } footer: {
+                Text("Increases contrast between text and backgrounds for better visibility.")
+                    .font(SovaFont.mono(.caption2))
+            }
+
+            Section {
+                Toggle(isOn: $reduceMotionEnabled) {
+                    Label("Reduce motion", systemImage: "hand.raised")
+                        .font(SovaFont.body(.body))
+                        .foregroundStyle(.sovaPrimaryText)
+                }
+            } header: {
+                Text("Motion")
+                    .font(SovaFont.mono(.caption2))
+            } footer: {
+                Text("Removes animations throughout the app for a calmer experience.")
+                    .font(SovaFont.mono(.caption2))
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(.sovaBackground)
+        .navigationTitle("Accessibility")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

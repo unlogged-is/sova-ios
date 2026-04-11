@@ -117,6 +117,7 @@ struct ItemDetailView: View {
         }
         .padding(20)
         .background(.sovaSurface, in: .rect(cornerRadius: 28))
+        .sovaCard(cornerRadius: 28)
     }
 
     private var floatingServiceButton: some View {
@@ -162,6 +163,7 @@ struct ItemDetailView: View {
         }
         .padding(20)
         .background(.sovaSurface, in: .rect(cornerRadius: 28))
+        .sovaCard(cornerRadius: 28)
     }
 
     private var photoStrip: some View {
@@ -200,6 +202,7 @@ struct ItemDetailView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(.sovaSurface, in: .rect(cornerRadius: 22))
+        .sovaCard(cornerRadius: 22)
     }
 
     private func detailRow(title: String, value: String) -> some View {
@@ -234,6 +237,7 @@ struct ItemDetailView: View {
         }
         .padding(20)
         .background(.sovaSurface, in: .rect(cornerRadius: 28))
+        .sovaCard(cornerRadius: 28)
     }
 
     private func remindersCard(reminders: [ItemReminder]) -> some View {
@@ -271,6 +275,7 @@ struct ItemDetailView: View {
         }
         .padding(20)
         .background(.sovaSurface, in: .rect(cornerRadius: 28))
+        .sovaCard(cornerRadius: 28)
     }
 
     private func reminderStatusColor(_ status: MaintenanceStatus) -> Color {

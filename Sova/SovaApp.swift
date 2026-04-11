@@ -21,6 +21,9 @@ enum SovaAppearance: String, CaseIterable, Identifiable {
 struct SovaApp: App {
     @AppStorage("sovaAppearance") private var appearance: String = SovaAppearance.system.rawValue
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
+    @AppStorage("useSystemFonts") private var useSystemFonts: Bool = false
+    @AppStorage("highContrastEnabled") private var highContrastEnabled: Bool = false
+    @AppStorage("reduceMotionEnabled") private var reduceMotionEnabled: Bool = false
 
     private let sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -44,15 +47,16 @@ struct SovaApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if hasCompletedOnboarding {
-                ContentView()
-                    .tint(.sovaPrimaryAccent)
-                    .preferredColorScheme(SovaAppearance(rawValue: appearance)?.colorScheme)
-            } else {
-                OnboardingView()
-                    .tint(.sovaPrimaryAccent)
-                    .preferredColorScheme(SovaAppearance(rawValue: appearance)?.colorScheme)
+            Group {
+                if hasCompletedOnboarding {
+                    ContentView()
+                } else {
+                    OnboardingView()
+                }
             }
+            .id("\(useSystemFonts)-\(highContrastEnabled)-\(reduceMotionEnabled)")
+            .tint(.sovaPrimaryAccent)
+            .preferredColorScheme(SovaAppearance(rawValue: appearance)?.colorScheme)
         }
         .modelContainer(sharedModelContainer)
     }

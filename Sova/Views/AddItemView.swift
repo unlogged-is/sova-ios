@@ -128,7 +128,7 @@ struct AddItemView: View {
                                 ForEach(Array(photoData.enumerated()), id: \.offset) { index, data in
                                     if let image = UIImage(data: data) {
                                         Button {
-                                            withAnimation(.snappy(duration: 0.2)) {
+                                            withAnimation(SovaAccessibility.animation(.snappy(duration: 0.2))) {
                                                 coverPhotoIndex = coverPhotoIndex == index ? nil : index
                                             }
                                         } label: {

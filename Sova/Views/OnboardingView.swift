@@ -34,7 +34,7 @@ struct OnboardingView: View {
             }
 
             Text("Sova")
-                .font(.custom("CormorantGaramond-Italic", size: 64))
+                .font(SovaFont.appTitle(size: 64))
                 .foregroundStyle(.sovaWarmAccent)
 
             Text("The things you own,\none place to care for them.")

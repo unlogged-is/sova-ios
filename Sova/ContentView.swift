@@ -85,7 +85,7 @@ struct ContentView: View {
                 geo.contentOffset.y
             } action: { _, _ in
                 if activeSwipeID != nil {
-                    withAnimation(.snappy(duration: 0.2)) { activeSwipeID = nil }
+                    withAnimation(SovaAccessibility.animation(.snappy(duration: 0.2))) { activeSwipeID = nil }
                 }
             }
             .background(.sovaBackground)
@@ -93,7 +93,7 @@ struct ContentView: View {
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Text("Sova")
-                        .font(.custom("CormorantGaramond-Italic", size: 32))
+                        .font(SovaFont.appTitle(size: 32))
                         .foregroundStyle(.sovaPrimaryAccent)
                 }
             }
@@ -123,13 +123,13 @@ struct ContentView: View {
                     hiddenCategories: hiddenCategorySet,
                     isPickerOpen: showCategoryPicker,
                     onAddTapped: {
-                        withAnimation(.spring(duration: 0.35, bounce: 0.2)) {
+                        withAnimation(SovaAccessibility.animation(.spring(duration: 0.35, bounce: 0.2))) {
                             showCategoryPicker.toggle()
                         }
                     },
                     onSettingsTapped: { isPresentingSettingsSheet = true },
                     onDismissPicker: {
-                        withAnimation(.spring(duration: 0.35, bounce: 0.2)) {
+                        withAnimation(SovaAccessibility.animation(.spring(duration: 0.35, bounce: 0.2))) {
                             showCategoryPicker = false
                         }
                     }
@@ -192,7 +192,7 @@ struct ContentView: View {
             Color.black.opacity(0.3)
                 .ignoresSafeArea()
                 .onTapGesture {
-                    withAnimation(.spring(duration: 0.35, bounce: 0.2)) {
+                    withAnimation(SovaAccessibility.animation(.spring(duration: 0.35, bounce: 0.2))) {
                         showCategoryPicker = false
                     }
                 }
@@ -206,7 +206,7 @@ struct ContentView: View {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 12)], spacing: 12) {
                     ForEach(visibleCategories) { category in
                         Button {
-                            withAnimation(.spring(duration: 0.35, bounce: 0.2)) {
+                            withAnimation(SovaAccessibility.animation(.spring(duration: 0.35, bounce: 0.2))) {
                                 showCategoryPicker = false
                             }
                             // Small delay so the picker dismisses before the sheet appears
@@ -261,12 +261,13 @@ struct ContentView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(.sovaSurface, in: .rect(cornerRadius: 16))
+        .sovaCard(cornerRadius: 16)
     }
 
     private var overdueSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             Button {
-                withAnimation(.snappy(duration: 0.25)) { isOverdueCollapsed.toggle() }
+                withAnimation(SovaAccessibility.animation(.snappy(duration: 0.25))) { isOverdueCollapsed.toggle() }
             } label: {
                 HStack {
                     Text("Overdue")
@@ -302,7 +303,7 @@ struct ContentView: View {
     private var comingDueSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             Button {
-                withAnimation(.snappy(duration: 0.25)) { isComingDueCollapsed.toggle() }
+                withAnimation(SovaAccessibility.animation(.snappy(duration: 0.25))) { isComingDueCollapsed.toggle() }
             } label: {
                 HStack {
                     Text("Coming due")
@@ -396,13 +397,11 @@ struct ContentView: View {
             Text("Nothing urgent")
                 .font(SovaFont.body(.headline, weight: .semibold))
                 .foregroundStyle(.sovaPrimaryText)
-            Text("Your next maintenance dates are either scheduled later or still being tracked.")
-                .font(SovaFont.body(.subheadline))
-                .foregroundStyle(.sovaSecondaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
         .background(.sovaSurface, in: .rect(cornerRadius: 26))
+        .sovaCard()
     }
 
     private func seedIfNeeded() {
@@ -557,19 +556,23 @@ private struct DueItemRow: View {
         }
         .padding(16)
         .background(.sovaSurface, in: .rect(cornerRadius: 24))
+        .sovaCard(cornerRadius: 24)
     }
 }
 
 private struct InventoryCard: View {
     let item: MaintenanceItem
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    private var subtitle: String {
+    private var isLargeType: Bool {
+        dynamicTypeSize >= .accessibility1
+    }
+
+    private var subtitle: String? {
         let fields = item.customFields
         switch item.category {
         case .car:
-            if let mileage = fields["mileage"], !mileage.isEmpty {
-                return "\(mileage) mi"
-            }
+            if let plate = fields["plateNumber"], !plate.isEmpty { return plate }
         case .hvac:
             let parts = [fields["systemType"], fields["filterSize"]]
                 .compactMap { $0?.isEmpty == false ? $0 : nil }
@@ -581,68 +584,95 @@ private struct InventoryCard: View {
         default:
             break
         }
-        if !item.itemDescription.isEmpty { return item.itemDescription }
-        return item.category.rawValue
+        return nil
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            VStack(alignment: .leading, spacing: 5) {
-                Text(item.title)
-                    .font(SovaFont.title(.title3))
-                    .foregroundStyle(.sovaPrimaryText)
-                    .lineLimit(1)
-
-                Text(subtitle)
-                    .font(SovaFont.body(.subheadline))
-                    .foregroundStyle(.sovaSecondaryText)
-                    .lineLimit(1)
-
-                Label(item.nextUpcomingServiceLabel, systemImage: "clock")
-                    .font(SovaFont.mono(.caption))
-                    .foregroundStyle(.sovaSecondaryText)
-                    .lineLimit(1)
-
-                HStack(spacing: 8) {
-                    Label(item.category.rawValue, systemImage: item.category.symbolName)
-                    let reminderCount = item.activeReminders.count
-                    if reminderCount > 0 {
-                        Text("·")
-                        Label(
-                            "\(reminderCount) reminder\(reminderCount == 1 ? "" : "s")",
-                            systemImage: "bell"
-                        )
-                    }
-                }
-                .font(SovaFont.mono(.caption))
-                .foregroundStyle(.sovaSecondaryText)
-            }
-
-            Spacer(minLength: 8)
-
-            VStack(alignment: .trailing, spacing: 8) {
-                Text(item.status.title)
-                    .font(SovaFont.mono(.caption, weight: .medium))
-                    .foregroundStyle(statusColor)
-                if let data: Data = item.coverPhotoData, let image: UIImage = UIImage(data: data) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 72, height: 72)
-                        .clipped()
-                        .clipShape(.rect(cornerRadius: 18))
-                        .accessibilityHidden(true)
-                } else {
-                    Image(systemName: item.category.symbolName)
-                        .font(.title2)
-                        .foregroundStyle(statusColor)
-                        .frame(width: 72, height: 72)
-                        .background(statusColor.opacity(0.12), in: .rect(cornerRadius: 18))
-                }
+        Group {
+            if isLargeType {
+                largeTypeLayout
+            } else {
+                standardLayout
             }
         }
         .padding(18)
         .background(.sovaSurface, in: .rect(cornerRadius: 26))
+        .sovaCard()
+    }
+
+    private var standardLayout: some View {
+        HStack(alignment: .center, spacing: 14) {
+            cardContent
+            Spacer(minLength: 8)
+            cardThumbnail
+        }
+    }
+
+    private var largeTypeLayout: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(item.status.title)
+                    .font(SovaFont.mono(.caption, weight: .medium))
+                    .foregroundStyle(statusColor)
+                Spacer()
+                Image(systemName: item.category.symbolName)
+                    .font(.body)
+                    .foregroundStyle(statusColor)
+            }
+            cardContent
+        }
+    }
+
+    private var cardContent: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(item.title)
+                .font(SovaFont.title(.title3))
+                .foregroundStyle(.sovaPrimaryText)
+                .lineLimit(isLargeType ? 2 : 1)
+
+            Text(subtitle ?? " ")
+                .font(SovaFont.body(.subheadline))
+                .foregroundStyle(.sovaSecondaryText)
+                .lineLimit(isLargeType ? 2 : 1)
+
+            Label(item.nextUpcomingServiceLabel, systemImage: "clock")
+                .font(SovaFont.mono(.caption))
+                .foregroundStyle(.sovaSecondaryText)
+                .lineLimit(isLargeType ? 2 : 1)
+
+            let reminderCount = item.activeReminders.count
+            if reminderCount > 0 {
+                Label(
+                    "\(reminderCount) reminder\(reminderCount == 1 ? "" : "s")",
+                    systemImage: "bell"
+                )
+                .font(SovaFont.mono(.caption))
+                .foregroundStyle(.sovaSecondaryText)
+            }
+        }
+    }
+
+    private var cardThumbnail: some View {
+        VStack(alignment: .trailing, spacing: 8) {
+            Text(item.status.title)
+                .font(SovaFont.mono(.caption, weight: .medium))
+                .foregroundStyle(statusColor)
+            if let data: Data = item.coverPhotoData, let image: UIImage = UIImage(data: data) {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 72, height: 72)
+                    .clipped()
+                    .clipShape(.rect(cornerRadius: 18))
+                    .accessibilityHidden(true)
+            } else {
+                Image(systemName: item.category.symbolName)
+                    .font(.title2)
+                    .foregroundStyle(statusColor)
+                    .frame(width: 72, height: 72)
+                    .background(statusColor.opacity(0.12), in: .rect(cornerRadius: 18))
+            }
+        }
     }
 
     private var statusColor: Color {
@@ -676,7 +706,7 @@ private struct SwipeToDeleteCard: View {
             if offset < 0 {
                 Button {
                     onDelete()
-                    withAnimation(.snappy(duration: 0.25)) { close() }
+                    withAnimation(SovaAccessibility.animation(.snappy(duration: 0.25))) { close() }
                 } label: {
                     Image(systemName: "trash.fill")
                         .font(.title3)
@@ -690,7 +720,7 @@ private struct SwipeToDeleteCard: View {
             // Card on top
             Button(action: {
                 if isOpen {
-                    withAnimation(.snappy(duration: 0.25)) { close() }
+                    withAnimation(SovaAccessibility.animation(.snappy(duration: 0.25))) { close() }
                 } else {
                     onTap()
                 }
@@ -717,7 +747,7 @@ private struct SwipeToDeleteCard: View {
                         guard isDragging else { return }
 
                         let velocity = value.predictedEndTranslation.width - value.translation.width
-                        withAnimation(.snappy(duration: 0.25)) {
+                        withAnimation(SovaAccessibility.animation(.snappy(duration: 0.25))) {
                             if value.translation.width < -30 || velocity < -200 {
                                 offset = -72
                                 activeSwipeID = item.persistentModelID
@@ -732,7 +762,7 @@ private struct SwipeToDeleteCard: View {
         .onChange(of: activeSwipeID) { _, newID in
             // Close this card if another card was swiped open
             if newID != item.persistentModelID && offset < 0 {
-                withAnimation(.snappy(duration: 0.25)) { offset = 0 }
+                withAnimation(SovaAccessibility.animation(.snappy(duration: 0.25))) { offset = 0 }
             }
         }
     }

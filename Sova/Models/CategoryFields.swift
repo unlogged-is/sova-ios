@@ -24,6 +24,7 @@ struct CategoryFieldDefinition: Identifiable {
                 .init(key: "make", label: "Make", fieldType: .text),
                 .init(key: "model", label: "Model", fieldType: .text),
                 .init(key: "year", label: "Year", fieldType: .number),
+                .init(key: "plateNumber", label: "Plate Number", fieldType: .text),
                 .init(key: "vin", label: "VIN", fieldType: .text),
                 .init(key: "mileage", label: "Mileage", fieldType: .number),
             ]
