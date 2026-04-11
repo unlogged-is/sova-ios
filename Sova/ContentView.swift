@@ -109,7 +109,11 @@ struct ContentView: View {
             }
             .overlay {
                 if items.isEmpty {
-                    ContentUnavailableStateView()
+                    ContentUnavailableStateView {
+                        withAnimation(SovaAccessibility.animation(.spring(duration: 0.35, bounce: 0.2))) {
+                            showCategoryPicker = true
+                        }
+                    }
                 }
             }
             .overlay {
@@ -166,7 +170,6 @@ struct ContentView: View {
                 path = [.detail(identifier)]
             }
             .task {
-                seedIfNeeded()
                 SovaWidgetStore.save(items: items)
                 NotificationManager.scheduleAllReminders(items: items)
             }
@@ -404,123 +407,7 @@ struct ContentView: View {
         .sovaCard()
     }
 
-    private func seedIfNeeded() {
-        guard items.isEmpty else { return }
-        let cal = Calendar.current
 
-        // --- Car: 2022 Subaru Outback (OVERDUE) ---
-        let car = MaintenanceItem(
-            title: "2022 Subaru Outback",
-            itemDescription: "",
-            categoryRawValue: SovaCategory.car.rawValue,
-            locationName: "Garage",
-            purchaseDate: cal.date(byAdding: .year, value: -3, to: .now),
-            lastServiceDate: cal.date(byAdding: .month, value: -7, to: .now),
-            notes: "Winter tires torqued to 89 ft-lbs."
-        )
-        car.customFields = [
-            "make": "Subaru",
-            "model": "Outback",
-            "year": "2022",
-            "mileage": "38400"
-        ]
-        modelContext.insert(car)
-
-        let oilChange = ItemReminder(
-            name: "Oil Change",
-            nextDueDate: cal.date(byAdding: .day, value: -5, to: .now),
-            intervalMonths: 6,
-            lastServiceDate: cal.date(byAdding: .month, value: -7, to: .now),
-            item: car
-        )
-        let tireRotation = ItemReminder(
-            name: "Tire Rotation",
-            nextDueDate: cal.date(byAdding: .month, value: 2, to: .now),
-            intervalMonths: 6,
-            lastServiceDate: cal.date(byAdding: .month, value: -4, to: .now),
-            item: car
-        )
-        let inspection = ItemReminder(
-            name: "Inspection",
-            nextDueDate: cal.date(byAdding: .month, value: 8, to: .now),
-            intervalMonths: 12,
-            lastServiceDate: cal.date(byAdding: .month, value: -4, to: .now),
-            item: car
-        )
-        modelContext.insert(oilChange)
-        modelContext.insert(tireRotation)
-        modelContext.insert(inspection)
-        car.nextDueDate = oilChange.nextDueDate
-
-        // --- HVAC: Upstairs unit (DUE SOON) ---
-        let hvac = MaintenanceItem(
-            title: "Upstairs HVAC",
-            itemDescription: "",
-            categoryRawValue: SovaCategory.hvac.rawValue,
-            locationName: "Hall closet",
-            purchaseDate: cal.date(byAdding: .year, value: -4, to: .now),
-            lastServiceDate: cal.date(byAdding: .month, value: -2, to: .now),
-            notes: "Uses 20x25x1 filters. Buy in bulk from Amazon."
-        )
-        hvac.customFields = [
-            "systemType": "Central Air",
-            "filterSize": "20x25x1",
-            "seerRating": "16"
-        ]
-        modelContext.insert(hvac)
-
-        let filterChange = ItemReminder(
-            name: "Filter Change",
-            nextDueDate: cal.date(byAdding: .day, value: 10, to: .now),
-            intervalMonths: 3,
-            lastServiceDate: cal.date(byAdding: .month, value: -2, to: .now),
-            item: hvac
-        )
-        let hvacInspection = ItemReminder(
-            name: "Inspection",
-            nextDueDate: cal.date(byAdding: .month, value: 5, to: .now),
-            intervalMonths: 12,
-            lastServiceDate: cal.date(byAdding: .month, value: -7, to: .now),
-            item: hvac
-        )
-        modelContext.insert(filterChange)
-        modelContext.insert(hvacInspection)
-        hvac.nextDueDate = filterChange.nextDueDate
-
-        // --- Appliance: LG Fridge (SCHEDULED — not due soon) ---
-        let fridge = MaintenanceItem(
-            title: "LG Fridge",
-            itemDescription: "",
-            categoryRawValue: SovaCategory.appliance.rawValue,
-            locationName: "Kitchen",
-            purchaseDate: cal.date(byAdding: .year, value: -1, to: .now),
-            lastServiceDate: cal.date(byAdding: .month, value: -1, to: .now),
-            notes: "Order filter before holiday hosting."
-        )
-        fridge.customFields = [
-            "brand": "LG",
-            "modelNumber": "LRMVS3006S"
-        ]
-        modelContext.insert(fridge)
-
-        let fridgeFilter = ItemReminder(
-            name: "Filter Replacement",
-            nextDueDate: cal.date(byAdding: .month, value: 5, to: .now),
-            intervalMonths: 6,
-            lastServiceDate: cal.date(byAdding: .month, value: -1, to: .now),
-            item: fridge
-        )
-        let fridgeCleaning = ItemReminder(
-            name: "Cleaning",
-            nextDueDate: cal.date(byAdding: .month, value: 2, to: .now),
-            intervalMonths: 3,
-            lastServiceDate: cal.date(byAdding: .month, value: -1, to: .now),
-            item: fridge
-        )
-        modelContext.insert(fridgeFilter)
-        modelContext.insert(fridgeCleaning)
-        fridge.nextDueDate = fridgeCleaning.nextDueDate
-    }
 }
 
 private struct DueItemRow: View {
