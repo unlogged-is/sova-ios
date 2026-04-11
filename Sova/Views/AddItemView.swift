@@ -12,8 +12,8 @@ struct AddItemView: View {
     @State private var title: String = ""
     @State private var itemDescription: String = ""
     @State private var category: SovaCategory = .car
-    @State private var locationName: String = ""
     @State private var purchaseDate: Date = .now
+    @State private var hasPurchaseDate: Bool = false
     @State private var notes: String = ""
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var photoData: [Data] = []
@@ -34,8 +34,10 @@ struct AddItemView: View {
 
     private var isEditing: Bool { itemToEdit != nil }
 
+    @AppStorage("usesMetricUnits") private var usesMetricUnits: Bool = false
+
     private var categoryFields: [CategoryFieldDefinition] {
-        CategoryFieldDefinition.fields(for: category)
+        CategoryFieldDefinition.fields(for: category, usesMetricUnits: usesMetricUnits)
     }
 
     /// Categories that auto-generate their title from custom fields
@@ -64,7 +66,6 @@ struct AddItemView: View {
     /// Whether any fields have been filled in (for discard confirmation)
     private var hasUnsavedChanges: Bool {
         if !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
-        if !locationName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
         if !notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
         if !photoData.isEmpty { return true }
         if !reminderDrafts.isEmpty { return true }
@@ -86,8 +87,6 @@ struct AddItemView: View {
                                 .tag(category)
                         }
                     }
-                    TextField("Location", text: $locationName)
-                        .font(SovaFont.body(.body))
                 }
 
                 if !categoryFields.isEmpty {
@@ -95,7 +94,10 @@ struct AddItemView: View {
                 }
 
                 Section("Dates") {
-                    DatePicker("Purchased", selection: $purchaseDate, displayedComponents: .date)
+                    Toggle("Purchase date", isOn: $hasPurchaseDate.animation())
+                    if hasPurchaseDate {
+                        DatePicker("Purchased", selection: $purchaseDate, displayedComponents: .date)
+                    }
                 }
 
                 remindersSection
@@ -384,8 +386,7 @@ struct AddItemView: View {
             existing.title = trimmedTitle
             existing.itemDescription = trimmedDescription
             existing.categoryRawValue = category.rawValue
-            existing.locationName = locationName.isEmpty ? nil : locationName
-            existing.purchaseDate = purchaseDate
+            existing.purchaseDate = hasPurchaseDate ? purchaseDate : nil
             existing.notes = trimmedNotes
             existing.updatedAt = .now
 
@@ -413,8 +414,7 @@ struct AddItemView: View {
                 title: trimmedTitle,
                 itemDescription: trimmedDescription,
                 categoryRawValue: category.rawValue,
-                locationName: locationName.isEmpty ? nil : locationName,
-                purchaseDate: purchaseDate,
+                purchaseDate: hasPurchaseDate ? purchaseDate : nil,
                 notes: trimmedNotes,
                 updatedAt: .now
             )
@@ -497,8 +497,10 @@ struct AddItemView: View {
         title = item.title
         itemDescription = item.itemDescription
         category = item.category
-        locationName = item.locationName ?? ""
-        purchaseDate = item.purchaseDate ?? .now
+        if let date = item.purchaseDate {
+            purchaseDate = date
+            hasPurchaseDate = true
+        }
         notes = item.notes
         photoData = item.photoData
         coverPhotoIndex = item.coverPhotoIndex

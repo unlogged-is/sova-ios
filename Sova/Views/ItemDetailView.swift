@@ -7,9 +7,10 @@ struct ItemDetailView: View {
     @State private var isPresentingEditSheet: Bool = false
     @State private var isPresentingServiceSheet: Bool = false
     @State private var selectedPhotoIndex: Int?
+    @AppStorage("usesMetricUnits") private var usesMetricUnits: Bool = false
 
     private var categoryFields: [CategoryFieldDefinition] {
-        CategoryFieldDefinition.fields(for: item.category)
+        CategoryFieldDefinition.fields(for: item.category, usesMetricUnits: usesMetricUnits)
     }
 
     private var filledCategoryFields: [(label: String, value: String)] {

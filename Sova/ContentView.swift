@@ -68,7 +68,7 @@ struct ContentView: View {
     var body: some View {
         NavigationStack(path: $path) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
+                VStack(alignment: .leading, spacing: 36) {
                     searchBar
                     if !items.isEmpty {
                         if searchText.isEmpty {
@@ -267,6 +267,8 @@ struct ContentView: View {
         .padding(.vertical, 12)
         .background(.sovaSurface, in: .rect(cornerRadius: 16))
         .sovaCard(cornerRadius: 16)
+        .opacity(items.isEmpty ? 0 : 1)
+        .disabled(items.isEmpty)
     }
 
     private var overdueSection: some View {

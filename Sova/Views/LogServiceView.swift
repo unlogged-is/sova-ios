@@ -12,7 +12,10 @@ struct LogServiceView: View {
     @State private var serviceNotes: String = ""
     @State private var nextServiceDates: [String: Date] = [:]
     @State private var updatedMileage: String = ""
+    @State private var previousMileage: String = ""
+    @FocusState private var isMileageFocused: Bool
     @State private var serviceLocation: String = ""
+    @AppStorage("usesMetricUnits") private var usesMetricUnits: Bool = false
 
     private var suggestions: [String] {
         item.category.serviceSuggestions
@@ -79,7 +82,7 @@ struct LogServiceView: View {
 
                         if item.category == .car {
                             HStack {
-                                Text("Current mileage")
+                                Text(usesMetricUnits ? "Current odometer (km)" : "Current mileage (mi)")
                                     .font(SovaFont.body(.body))
                                     .foregroundStyle(.sovaPrimaryText)
                                 Spacer()
@@ -88,6 +91,15 @@ struct LogServiceView: View {
                                     .foregroundStyle(.sovaPrimaryText)
                                     .keyboardType(.numberPad)
                                     .multilineTextAlignment(.trailing)
+                                    .focused($isMileageFocused)
+                                    .onChange(of: isMileageFocused) { _, focused in
+                                        if focused {
+                                            previousMileage = updatedMileage
+                                            updatedMileage = ""
+                                        } else if updatedMileage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                            updatedMileage = previousMileage
+                                        }
+                                    }
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 8)
                                     .frame(width: 130)
@@ -272,7 +284,7 @@ struct LogServiceView: View {
         }
         let trimmedMileage = updatedMileage.trimmingCharacters(in: .whitespacesAndNewlines)
         if item.category == .car, !trimmedMileage.isEmpty {
-            logEntry += " \(trimmedMileage) mi"
+            logEntry += " \(trimmedMileage) \(usesMetricUnits ? "km" : "mi")"
         }
         if !serviceNotes.isEmpty {
             logEntry += " — \(serviceNotes)"

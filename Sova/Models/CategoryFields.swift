@@ -17,7 +17,7 @@ struct CategoryFieldDefinition: Identifiable {
 
     var id: String { key }
 
-    static func fields(for category: SovaCategory) -> [CategoryFieldDefinition] {
+    static func fields(for category: SovaCategory, usesMetricUnits: Bool = false) -> [CategoryFieldDefinition] {
         switch category {
         case .car:
             [
@@ -26,7 +26,7 @@ struct CategoryFieldDefinition: Identifiable {
                 .init(key: "year", label: "Year", fieldType: .number),
                 .init(key: "plateNumber", label: "Plate Number", fieldType: .text),
                 .init(key: "vin", label: "VIN", fieldType: .text),
-                .init(key: "mileage", label: "Mileage", fieldType: .number),
+                .init(key: "mileage", label: usesMetricUnits ? "Mileage (km)" : "Mileage (mi)", fieldType: .number),
             ]
         case .appliance:
             [

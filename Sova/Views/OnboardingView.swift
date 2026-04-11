@@ -11,6 +11,8 @@ struct OnboardingView: View {
     @State private var carMake: String = ""
     @State private var carModel: String = ""
     @State private var carYear: String = ""
+    @State private var carMileage: String = ""
+    @AppStorage("usesMetricUnits") private var usesMetricUnits: Bool = false
 
     var body: some View {
         ZStack {
@@ -32,6 +34,7 @@ struct OnboardingView: View {
     private var welcomePage: some View {
         VStack(spacing: 24) {
             Spacer()
+            Spacer()
 
             if let uiImage = UIImage(named: "AppIcon") ?? Bundle.main.icon {
                 Image(uiImage: uiImage)
@@ -50,7 +53,7 @@ struct OnboardingView: View {
                 .foregroundStyle(.sovaPrimaryText)
                 .multilineTextAlignment(.center)
 
-            Text("Cars, appliances, electronic, warranties, and the rest of home life. Sova helps you keep track of your belongings.")
+            Text("Cars, appliances, electronics and the rest of home life. Sova helps you keep track of your stuff.")
                 .font(SovaFont.body(.body))
                 .foregroundStyle(.sovaSecondaryText)
                 .multilineTextAlignment(.center)
@@ -74,6 +77,12 @@ struct OnboardingView: View {
                 .font(SovaFont.title(.title2))
                 .foregroundStyle(.sovaPrimaryText)
 
+            Text("From oil changes to appliance warranties, Sova keeps all your ownership details organized.")
+                .font(SovaFont.body(.body))
+                .foregroundStyle(.sovaSecondaryText)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+
             VStack(alignment: .leading, spacing: 20) {
                 featureRow(
                     icon: "calendar.badge.clock",
@@ -84,6 +93,16 @@ struct OnboardingView: View {
                     icon: "photo.on.rectangle.angled",
                     title: "Photos & notes",
                     subtitle: "Keep receipts, warranty info, and details"
+                )
+                featureRow(
+                    icon: "bell.badge.fill",
+                    title: "Smart reminders",
+                    subtitle: "Get notified before services are due"
+                )
+                featureRow(
+                    icon: "car.fill",
+                    title: "Vehicle management",
+                    subtitle: "Track mileage, services, and costs per car"
                 )
                 featureRow(
                     icon: "icloud.fill",
@@ -165,6 +184,32 @@ struct OnboardingView: View {
                 onboardingField("Make", text: $carMake, placeholder: "e.g. Toyota")
                 onboardingField("Model", text: $carModel, placeholder: "e.g. Camry")
                 onboardingField("Year", text: $carYear, placeholder: "e.g. 2022", keyboard: .numberPad)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(usesMetricUnits ? "Mileage (km)" : "Mileage (mi)")
+                        .font(SovaFont.mono(.caption, weight: .medium))
+                        .foregroundStyle(.sovaSecondaryText)
+
+                    HStack(spacing: 10) {
+                        TextField("e.g. 45000", text: $carMileage)
+                            .font(SovaFont.body(.body))
+                            .foregroundStyle(.sovaPrimaryText)
+                            .keyboardType(.numberPad)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(.sovaSurface, in: .rect(cornerRadius: 12))
+
+                        HStack(spacing: 0) {
+                            unitButton("mi", isSelected: !usesMetricUnits) {
+                                usesMetricUnits = false
+                            }
+                            unitButton("km", isSelected: usesMetricUnits) {
+                                usesMetricUnits = true
+                            }
+                        }
+                        .background(.sovaSurface, in: .rect(cornerRadius: 12))
+                    }
+                }
             }
             .padding(.horizontal, 8)
             .padding(.top, 8)
@@ -198,6 +243,18 @@ struct OnboardingView: View {
         return parts.joined(separator: " ")
     }
 
+    private func unitButton(_ label: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(SovaFont.mono(.subheadline, weight: .medium))
+                .foregroundStyle(isSelected ? .sovaBackground : .sovaSecondaryText)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(isSelected ? Color.sovaPrimaryAccent : .clear, in: .rect(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+    }
+
     private func onboardingField(_ label: String, text: Binding<String>, placeholder: String, keyboard: UIKeyboardType = .default) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
@@ -222,11 +279,16 @@ struct OnboardingView: View {
             itemDescription: "",
             categoryRawValue: SovaCategory.car.rawValue
         )
-        car.customFields = [
+        var fields: [String: String] = [
             "make": carMake.trimmingCharacters(in: .whitespacesAndNewlines),
             "model": carModel.trimmingCharacters(in: .whitespacesAndNewlines),
             "year": carYear.trimmingCharacters(in: .whitespacesAndNewlines)
         ]
+        let trimmedMileage = carMileage.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedMileage.isEmpty {
+            fields["mileage"] = trimmedMileage
+        }
+        car.customFields = fields
         modelContext.insert(car)
         completeOnboarding()
     }

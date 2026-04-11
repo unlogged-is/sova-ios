@@ -91,7 +91,7 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(alignment: .firstTextBaseline) {
                             Text("Sova")
-                                .font(SovaFont.title(.title2))
+                                .font(SovaFont.appTitle(size: 26))
                                 .foregroundStyle(.sovaPrimaryText)
                             Spacer()
                             Text("v\(appVersion) (\(buildNumber))")
