@@ -1,6 +1,8 @@
+import AVFoundation
 import PhotosUI
 import SwiftData
 import SwiftUI
+import VisionKit
 
 struct AddItemView: View {
     @Environment(\.dismiss) private var dismiss
@@ -19,7 +21,14 @@ struct AddItemView: View {
     @State private var photoData: [Data] = []
     @State private var showDeleteConfirmation: Bool = false
     @State private var showDiscardConfirmation: Bool = false
-    @State private var showCamera: Bool = false
+    @State private var showCameraDeniedAlert: Bool = false
+    @State private var activeFullScreen: FullScreenType?
+
+    private enum FullScreenType: String, Identifiable {
+        case camera
+        case documentScanner
+        var id: String { rawValue }
+    }
     @State private var coverPhotoIndex: Int?
 
     // Category-specific fields
@@ -108,65 +117,7 @@ struct AddItemView: View {
                         .lineLimit(4...8)
                 }
 
-                Section {
-                    PhotosPicker(selection: $selectedPhotos, maxSelectionCount: 6, matching: .images) {
-                        Label("Choose from library", systemImage: "photo.on.rectangle.angled")
-                    }
-
-                    Button {
-                        showCamera = true
-                    } label: {
-                        Label("Take photo", systemImage: "camera")
-                    }
-                    .disabled(photoData.count >= 6)
-
-                    if !photoData.isEmpty {
-                        Text("Tap a photo to set it as the card icon")
-                            .font(SovaFont.mono(.caption))
-                            .foregroundStyle(.sovaSecondaryText)
-
-                        ScrollView(.horizontal) {
-                            HStack(spacing: 12) {
-                                ForEach(Array(photoData.enumerated()), id: \.offset) { index, data in
-                                    if let image = UIImage(data: data) {
-                                        Button {
-                                            withAnimation(SovaAccessibility.animation(.snappy(duration: 0.2))) {
-                                                coverPhotoIndex = coverPhotoIndex == index ? nil : index
-                                            }
-                                        } label: {
-                                            Image(uiImage: image)
-                                                .resizable()
-                                                .aspectRatio(contentMode: .fill)
-                                                .frame(width: 96, height: 96)
-                                                .clipped()
-                                                .clipShape(.rect(cornerRadius: 16))
-                                                .overlay {
-                                                    if coverPhotoIndex == index {
-                                                        RoundedRectangle(cornerRadius: 16)
-                                                            .stroke(Color.sovaPrimaryAccent, lineWidth: 3)
-                                                        Image(systemName: "checkmark.circle.fill")
-                                                            .font(.title3)
-                                                            .foregroundStyle(.white, Color.sovaPrimaryAccent)
-                                                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                                                            .padding(6)
-                                                    }
-                                                }
-                                                .accessibilityLabel(coverPhotoIndex == index ? "Cover photo \(index + 1)" : "Photo \(index + 1)")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        .contentMargins(.horizontal, 16)
-                        .scrollIndicators(.hidden)
-                    }
-                } header: {
-                    Text("Photos")
-                } footer: {
-                    if coverPhotoIndex != nil {
-                        Text("Selected photo will replace the category icon on the card.")
-                    }
-                }
+                photosSection
 
                 if isEditing {
                     Section {
@@ -278,13 +229,36 @@ struct AddItemView: View {
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
             }
-            .fullScreenCover(isPresented: $showCamera) {
-                CameraPickerView { image in
-                    if let compressed = Self.compressPhoto(image.jpegData(compressionQuality: 1.0) ?? Data()) {
-                        photoData.append(compressed)
+            .fullScreenCover(item: $activeFullScreen) { type in
+                switch type {
+                case .camera:
+                    CameraPickerView { image in
+                        if let compressed = Self.compressPhoto(image.jpegData(compressionQuality: 1.0) ?? Data()) {
+                            photoData.append(compressed)
+                        }
+                    }
+                    .ignoresSafeArea()
+                case .documentScanner:
+                    DocumentScannerView { images in
+                        let remaining = 6 - photoData.count
+                        for image in images.prefix(remaining) {
+                            if let compressed = Self.compressPhoto(image.jpegData(compressionQuality: 1.0) ?? Data()) {
+                                photoData.append(compressed)
+                            }
+                        }
+                    }
+                    .ignoresSafeArea()
+                }
+            }
+            .alert("Camera Access Required", isPresented: $showCameraDeniedAlert) {
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
                     }
                 }
-                .ignoresSafeArea()
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Please allow camera access in Settings to take photos.")
             }
         }
     }
@@ -348,6 +322,77 @@ struct AddItemView: View {
             } label: {
                 Label("Add reminder", systemImage: "plus.circle")
                     .font(SovaFont.body(.body))
+            }
+        }
+    }
+
+    // MARK: - Photos Section
+
+    private var photosSection: some View {
+        Section {
+            PhotosPicker(selection: $selectedPhotos, maxSelectionCount: 6, matching: .images) {
+                Label("Choose from library", systemImage: "photo.on.rectangle.angled")
+            }
+
+            Button {
+                requestCameraAccess()
+            } label: {
+                Label("Take photo", systemImage: "camera")
+            }
+            .disabled(photoData.count >= 6)
+
+            Button {
+                activeFullScreen = .documentScanner
+            } label: {
+                Label("Scan document", systemImage: "doc.viewfinder")
+            }
+            .disabled(photoData.count >= 6 || !VNDocumentCameraViewController.isSupported)
+
+            if !photoData.isEmpty {
+                Text("Tap a photo to set it as the card icon")
+                    .font(SovaFont.mono(.caption))
+                    .foregroundStyle(.sovaSecondaryText)
+
+                ScrollView(.horizontal) {
+                    HStack(spacing: 12) {
+                        ForEach(Array(photoData.enumerated()), id: \.offset) { index, data in
+                            if let image = UIImage(data: data) {
+                                Button {
+                                    withAnimation(SovaAccessibility.animation(.snappy(duration: 0.2))) {
+                                        coverPhotoIndex = coverPhotoIndex == index ? nil : index
+                                    }
+                                } label: {
+                                    Image(uiImage: image)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: 96, height: 96)
+                                        .clipped()
+                                        .clipShape(.rect(cornerRadius: 16))
+                                        .overlay {
+                                            if coverPhotoIndex == index {
+                                                RoundedRectangle(cornerRadius: 16)
+                                                    .stroke(Color.sovaPrimaryAccent, lineWidth: 3)
+                                                Image(systemName: "checkmark.circle.fill")
+                                                    .font(.title3)
+                                                    .foregroundStyle(.white, Color.sovaPrimaryAccent)
+                                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                                                    .padding(6)
+                                            }
+                                        }
+                                        .accessibilityLabel(coverPhotoIndex == index ? "Cover photo \(index + 1)" : "Photo \(index + 1)")
+                                }
+                            }
+                        }
+                    }
+                }
+                .contentMargins(.horizontal, 16)
+                .scrollIndicators(.hidden)
+            }
+        } header: {
+            Text("Photos")
+        } footer: {
+            if coverPhotoIndex != nil {
+                Text("Selected photo will replace the category icon on the card.")
             }
         }
     }
@@ -508,6 +553,27 @@ struct AddItemView: View {
         reminderDrafts = (item.reminders ?? []).map { ReminderDraft(from: $0) }
     }
 
+    // MARK: - Camera Access
+
+    private func requestCameraAccess() {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            activeFullScreen = .camera
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                DispatchQueue.main.async {
+                    if granted {
+                        activeFullScreen = .camera
+                    }
+                }
+            }
+        case .denied, .restricted:
+            showCameraDeniedAlert = true
+        @unknown default:
+            showCameraDeniedAlert = true
+        }
+    }
+
     // MARK: - Photo Compression
 
     /// Compresses a photo to JPEG at 0.8 quality, capping the longest edge at 2048px.
@@ -571,6 +637,52 @@ private struct CameraPickerView: UIViewControllerRepresentable {
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            dismiss()
+        }
+    }
+}
+
+// MARK: - Document Scanner
+
+private struct DocumentScannerView: UIViewControllerRepresentable {
+    @Environment(\.dismiss) private var dismiss
+    var onScan: ([UIImage]) -> Void
+
+    func makeUIViewController(context: Context) -> VNDocumentCameraViewController {
+        let scanner = VNDocumentCameraViewController()
+        scanner.delegate = context.coordinator
+        return scanner
+    }
+
+    func updateUIViewController(_ uiViewController: VNDocumentCameraViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(dismiss: dismiss, onScan: onScan)
+    }
+
+    final class Coordinator: NSObject, VNDocumentCameraViewControllerDelegate {
+        let dismiss: DismissAction
+        let onScan: ([UIImage]) -> Void
+
+        init(dismiss: DismissAction, onScan: @escaping ([UIImage]) -> Void) {
+            self.dismiss = dismiss
+            self.onScan = onScan
+        }
+
+        func documentCameraViewController(_ controller: VNDocumentCameraViewController, didFinishWith scan: VNDocumentCameraScan) {
+            var images: [UIImage] = []
+            for i in 0..<scan.pageCount {
+                images.append(scan.imageOfPage(at: i))
+            }
+            onScan(images)
+            dismiss()
+        }
+
+        func documentCameraViewControllerDidCancel(_ controller: VNDocumentCameraViewController) {
+            dismiss()
+        }
+
+        func documentCameraViewController(_ controller: VNDocumentCameraViewController, didFailWithError error: Error) {
             dismiss()
         }
     }

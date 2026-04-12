@@ -360,22 +360,37 @@ struct ContentView: View {
                     .foregroundStyle(.sovaSecondaryText)
             }
 
-            LazyVStack(spacing: 12) {
-                ForEach(displayItems) { item in
-                    if swipeToDeleteEnabled {
-                        SwipeToDeleteCard(item: item, activeSwipeID: $activeSwipeID) {
-                            path.append(.detail(item.persistentModelID))
-                        } onDelete: {
-                            itemToDelete = item
-                            showDeleteConfirmation = true
+            if displayItems.isEmpty {
+                VStack(spacing: 10) {
+                    Text("No \(selectedCategory?.rawValue.lowercased() ?? "") items yet")
+                        .font(SovaFont.title(.headline))
+                        .foregroundStyle(.sovaSecondaryText)
+                    if !searchText.isEmpty {
+                        Text("Try a different search term")
+                            .font(SovaFont.body(.subheadline))
+                            .foregroundStyle(.sovaSecondaryText)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 32)
+            } else {
+                LazyVStack(spacing: 12) {
+                    ForEach(displayItems) { item in
+                        if swipeToDeleteEnabled {
+                            SwipeToDeleteCard(item: item, activeSwipeID: $activeSwipeID) {
+                                path.append(.detail(item.persistentModelID))
+                            } onDelete: {
+                                itemToDelete = item
+                                showDeleteConfirmation = true
+                            }
+                        } else {
+                            Button {
+                                path.append(.detail(item.persistentModelID))
+                            } label: {
+                                InventoryCard(item: item)
+                            }
+                            .buttonStyle(.plain)
                         }
-                    } else {
-                        Button {
-                            path.append(.detail(item.persistentModelID))
-                        } label: {
-                            InventoryCard(item: item)
-                        }
-                        .buttonStyle(.plain)
                     }
                 }
             }
