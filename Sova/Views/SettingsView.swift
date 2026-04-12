@@ -142,6 +142,8 @@ private struct NotificationSettingsView: View {
     @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = true
     @AppStorage("notificationAdvanceDays") private var advanceDays: Int = 7
     @AppStorage("notificationHour") private var notificationHour: Int = 9
+    @State private var showTestConfirmation: Bool = false
+    @State private var testNotificationSent: Bool = false
 
     private let advanceDayOptions = [1, 2, 3, 5, 7, 14]
     private let hourRange = 6...21
@@ -179,7 +181,7 @@ private struct NotificationSettingsView: View {
             if notificationsEnabled {
                 Section {
                     Button {
-                        sendTestNotifications()
+                        showTestConfirmation = true
                     } label: {
                         Label("Send test notification", systemImage: "bell.and.waves.left.and.right")
                             .font(SovaFont.body(.body))
@@ -187,9 +189,6 @@ private struct NotificationSettingsView: View {
                     }
                 } header: {
                     Text("Test")
-                        .font(SovaFont.mono(.caption2))
-                } footer: {
-                    Text("Sends two notifications: \"coming due\" in 5 seconds and \"due today\" in 10 seconds. Lock or background the app to see them.")
                         .font(SovaFont.mono(.caption2))
                 }
 
@@ -233,6 +232,20 @@ private struct NotificationSettingsView: View {
         .background(.sovaBackground)
         .navigationTitle("Notifications")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Send test notifications?", isPresented: $showTestConfirmation) {
+            Button("Send") {
+                sendTestNotifications()
+                testNotificationSent = true
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Two test notifications will be sent — one in 5 seconds and another in 10 seconds. Lock or background the app to see them.")
+        }
+        .alert("Notifications scheduled", isPresented: $testNotificationSent) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Lock or background the app now. You'll receive a \"coming due\" notification in about 5 seconds and a \"due today\" notification in about 10 seconds.")
+        }
     }
 
     private func sendTestNotifications() {

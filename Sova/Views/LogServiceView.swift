@@ -40,8 +40,20 @@ struct LogServiceView: View {
         return names
     }
 
-    private var defaultNextDate: Date {
-        Calendar.current.date(byAdding: .month, value: 6, to: serviceDate) ?? serviceDate
+    private func defaultNextDate(for serviceName: String = "") -> Date {
+        let months = defaultIntervalMonths(for: serviceName)
+        return Calendar.current.date(byAdding: .month, value: months, to: serviceDate) ?? serviceDate
+    }
+
+    private func defaultIntervalMonths(for serviceName: String) -> Int {
+        switch serviceName {
+        case "Oil Change": return 3
+        case "Tire Rotation": return 6
+        case "Air Filter": return 12
+        case "Brake Service": return 12
+        case "Filter Change": return 3
+        default: return 6
+        }
     }
 
     var body: some View {
@@ -217,7 +229,7 @@ struct LogServiceView: View {
     private func nextDateRow(for name: String, isLast: Bool) -> some View {
         let matchingReminder = findMatchingReminder(for: name)
         let binding = Binding<Date>(
-            get: { nextServiceDates[name] ?? defaultNextDate },
+            get: { nextServiceDates[name] ?? defaultNextDate(for: name) },
             set: { nextServiceDates[name] = $0 }
         )
 
@@ -298,7 +310,7 @@ struct LogServiceView: View {
 
         // Process each service
         for name in names {
-            let nextDate = nextServiceDates[name] ?? defaultNextDate
+            let nextDate = nextServiceDates[name] ?? defaultNextDate(for: name)
             let monthsUntilNext = Calendar.current.dateComponents([.month], from: serviceDate, to: nextDate).month ?? 6
 
             if let reminder = findMatchingReminder(for: name) {
