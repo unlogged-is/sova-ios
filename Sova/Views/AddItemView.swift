@@ -253,8 +253,7 @@ struct AddItemView: View {
                     .ignoresSafeArea()
                 case .documentScanner:
                     DocumentScannerView { images in
-                        let remaining = 6 - photoData.count
-                        for image in images.prefix(remaining) {
+                        for image in images {
                             if let compressed = Self.compressPhoto(image.jpegData(compressionQuality: 1.0) ?? Data()) {
                                 photoData.append(compressed)
                             }
@@ -348,7 +347,7 @@ struct AddItemView: View {
 
     private var photosSection: some View {
         Section {
-            PhotosPicker(selection: $selectedPhotos, maxSelectionCount: 6, matching: .images) {
+            PhotosPicker(selection: $selectedPhotos, matching: .images) {
                 Label("Choose from library", systemImage: "photo.on.rectangle.angled")
             }
 
@@ -357,7 +356,6 @@ struct AddItemView: View {
             } label: {
                 Label("Take photo", systemImage: "camera")
             }
-            .disabled(photoData.count >= 6)
 
             Button {
                 if store.isPro {
@@ -368,15 +366,16 @@ struct AddItemView: View {
             } label: {
                 HStack {
                     Label("Scan document", systemImage: "doc.viewfinder")
+                        .foregroundStyle(store.isPro ? .sovaPrimaryAccent : .sovaSecondaryText)
+                    Spacer()
                     if !store.isPro {
-                        Spacer()
                         Image(systemName: "lock.fill")
                             .font(.caption)
                             .foregroundStyle(.sovaSecondaryText)
                     }
                 }
             }
-            .disabled(photoData.count >= 6 || !VNDocumentCameraViewController.isSupported)
+            .disabled(!store.isPro ? false : !VNDocumentCameraViewController.isSupported)
 
             if !photoData.isEmpty {
                 Text("Tap a photo to set it as the card icon")

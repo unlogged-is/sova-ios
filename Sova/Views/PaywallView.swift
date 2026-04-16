@@ -15,6 +15,7 @@ struct PaywallView: View {
                     header
                     features
                     plans
+                    testingBanner
                     purchaseButton
                     footer
                 }
@@ -57,7 +58,7 @@ struct PaywallView: View {
 
             Text("Sova Pro")
                 .font(SovaFont.appTitle(size: 40))
-                .foregroundStyle(.sovaPrimaryText)
+                .foregroundStyle(.sovaPrimaryAccent)
 
             Text("Unlock the full experience")
                 .font(SovaFont.body(.body))
@@ -109,8 +110,7 @@ struct PaywallView: View {
                 planCard(
                     product: monthly,
                     title: "Monthly",
-                    price: monthly.displayPrice,
-                    detail: "per month"
+                    price: monthly.displayPrice
                 )
             }
             if let yearly = store.yearlyProduct {
@@ -118,7 +118,7 @@ struct PaywallView: View {
                     product: yearly,
                     title: "Yearly",
                     price: yearly.displayPrice,
-                    detail: savingsLabel(yearly)
+                    detail: yearlySavingsDetail(yearly)
                 )
             }
             if let lifetime = store.lifetimeProduct {
@@ -132,7 +132,7 @@ struct PaywallView: View {
         }
     }
 
-    private func planCard(product: Product, title: String, price: String, detail: String) -> some View {
+    private func planCard(product: Product, title: String, price: String, detail: String? = nil) -> some View {
         let isSelected = selectedProduct?.id == product.id
         return Button {
             withAnimation(SovaAccessibility.animation(.snappy(duration: 0.2))) {
@@ -144,9 +144,11 @@ struct PaywallView: View {
                     Text(title)
                         .font(SovaFont.body(.headline, weight: .semibold))
                         .foregroundStyle(.sovaPrimaryText)
-                    Text(detail)
-                        .font(SovaFont.mono(.caption))
-                        .foregroundStyle(.sovaSecondaryText)
+                    if let detail {
+                        Text(detail)
+                            .font(SovaFont.mono(.caption))
+                            .foregroundStyle(.sovaSecondaryText)
+                    }
                 }
                 Spacer()
                 Text(price)
@@ -166,16 +168,16 @@ struct PaywallView: View {
         .buttonStyle(.plain)
     }
 
-    private func savingsLabel(_ yearly: Product) -> String {
-        guard let monthly = store.monthlyProduct else { return "per year" }
+    private func yearlySavingsDetail(_ yearly: Product) -> String? {
+        guard let monthly = store.monthlyProduct else { return nil }
         let monthlyAnnual = NSDecimalNumber(decimal: monthly.price * 12)
         let yearlyPrice = NSDecimalNumber(decimal: yearly.price)
         let saved = monthlyAnnual.subtracting(yearlyPrice)
         if saved.doubleValue > 0 {
             let percent = Int((saved.doubleValue / monthlyAnnual.doubleValue * 100).rounded())
-            return "per year - save \(percent)%"
+            return "Save \(percent)%"
         }
-        return "per year"
+        return nil
     }
 
     // MARK: - Purchase Button
@@ -216,6 +218,17 @@ struct PaywallView: View {
     }
 
     // MARK: - Footer
+
+    // TODO: Remove before release
+    private var testingBanner: some View {
+        Text("🧪 Testing mode — no charges will be made")
+            .font(SovaFont.mono(.caption, weight: .medium))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
+            .background(.orange, in: .rect(cornerRadius: 12))
+    }
 
     private var footer: some View {
         VStack(spacing: 8) {
