@@ -80,7 +80,7 @@ struct OnboardingView: View {
                 .font(SovaFont.title(.title2))
                 .foregroundStyle(.sovaPrimaryText)
 
-            Text("From oil changes to appliance warranties, Sova keeps all your ownership details organized.")
+            Text("From oil changes to appliance warranties. Everything in one app.")
                 .font(SovaFont.body(.body))
                 .foregroundStyle(.sovaSecondaryText)
                 .multilineTextAlignment(.center)
@@ -95,12 +95,12 @@ struct OnboardingView: View {
                 featureRow(
                     icon: "bell.badge.fill",
                     title: "Smart reminders",
-                    subtitle: "Get notified before services are due"
+                    subtitle: "Get notified before service is due"
                 )
                 featureRow(
                     icon: "icloud.fill",
                     title: "Synced everywhere",
-                    subtitle: "Your data backed up and synced across devices"
+                    subtitle: "Backed up and synced with iCloud"
                 )
                 featureRow(
                     icon: "infinity",
@@ -111,13 +111,13 @@ struct OnboardingView: View {
                 featureRow(
                     icon: "doc.viewfinder",
                     title: "Document scanning",
-                    subtitle: "Scan receipts, warranties, and manuals",
+                    subtitle: "Scan receipts, warranties & more",
                     isPro: true
                 )
                 featureRow(
                     icon: "folder.badge.plus",
                     title: "Custom categories",
-                    subtitle: "Organize your way with custom icons and colors",
+                    subtitle: "Organize with your own categories",
                     isPro: true
                 )
             }

@@ -32,7 +32,15 @@ struct PaywallView: View {
                 if isPro { dismiss() }
             }
         }
-        .onAppear {
+        .task {
+            if store.products.isEmpty {
+                await store.loadProducts()
+            }
+            if selectedProduct == nil {
+                selectedProduct = store.yearlyProduct
+            }
+        }
+        .onChange(of: store.products) { _, _ in
             if selectedProduct == nil {
                 selectedProduct = store.yearlyProduct
             }
@@ -66,7 +74,7 @@ struct PaywallView: View {
             featureRow(icon: "infinity", text: "Unlimited items")
             featureRow(icon: "doc.viewfinder", text: "Document & receipt scanning")
             featureRow(icon: "checkmark.shield.fill", text: "Warranties & receipt tracking")
-            featureRow(icon: "icloud.fill", text: "Full iCloud sync")
+            featureRow(icon: "folder.badge.plus", text: "Custom categories")
             featureRow(icon: "person.2.fill", text: "Family Sharing included")
         }
         .padding(20)
@@ -91,6 +99,12 @@ struct PaywallView: View {
 
     private var plans: some View {
         VStack(spacing: 10) {
+            if store.products.isEmpty {
+                ProgressView("Loading plans...")
+                    .font(SovaFont.body(.subheadline))
+                    .foregroundStyle(.sovaSecondaryText)
+                    .padding(.vertical, 20)
+            }
             if let monthly = store.monthlyProduct {
                 planCard(
                     product: monthly,
@@ -181,7 +195,7 @@ struct PaywallView: View {
                         ProgressView()
                             .tint(.sovaBackground)
                     } else {
-                        Text("Subscribe")
+                        Text(selectedProduct?.id == StoreManager.lifetimeID ? "Purchase" : "Subscribe")
                             .font(SovaFont.body(.headline, weight: .semibold))
                     }
                 }
@@ -211,7 +225,7 @@ struct PaywallView: View {
             .font(SovaFont.body(.subheadline))
             .foregroundStyle(.sovaSecondaryText)
 
-            Text("Subscriptions renew automatically. Cancel anytime in Settings.")
+            Text("Subscriptions renew automatically. Cancel anytime in Settings. Lifetime is a one-time purchase.")
                 .font(SovaFont.mono(.caption2))
                 .foregroundStyle(.sovaSecondaryText)
                 .multilineTextAlignment(.center)

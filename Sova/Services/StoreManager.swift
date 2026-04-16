@@ -46,9 +46,11 @@ final class StoreManager {
 
     func loadProducts() async {
         do {
-            products = try await Product.products(for: Self.allProductIDs)
-                .sorted { $0.price < $1.price }
+            let fetched = try await Product.products(for: Self.allProductIDs)
+            products = fetched.sorted { $0.price < $1.price }
+            print("[StoreManager] Loaded \(fetched.count) products: \(fetched.map(\.id))")
         } catch {
+            print("[StoreManager] Failed to load products: \(error)")
             purchaseError = "Failed to load products."
         }
     }
