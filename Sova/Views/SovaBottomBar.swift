@@ -3,13 +3,31 @@ import SwiftUI
 struct SovaBottomBar: View {
     @Binding var selectedCategory: SovaCategory?
     var hiddenCategories: Set<String> = []
+    var customCategories: [CustomCategory] = []
+    var selectedCustomCategoryFilter: UUID?
+    var onCustomCategorySelected: ((UUID?) -> Void)?
     var isPickerOpen: Bool = false
     var onAddTapped: () -> Void
     var onSettingsTapped: () -> Void
     var onDismissPicker: (() -> Void)? = nil
 
     private var visibleCategories: [SovaCategory] {
-        SovaCategory.allCases.filter { !hiddenCategories.contains($0.rawValue) }
+        SovaCategory.allCases.filter { $0 != .other && !hiddenCategories.contains($0.rawValue) }
+    }
+
+    private var selectedCustom: CustomCategory? {
+        guard let id = selectedCustomCategoryFilter else { return nil }
+        return customCategories.first { $0.id == id }
+    }
+
+    private var filterIcon: String {
+        if let custom = selectedCustom { return custom.symbolName }
+        return selectedCategory?.symbolName ?? "square.grid.2x2"
+    }
+
+    private var filterLabel: String {
+        if let custom = selectedCustom { return custom.name }
+        return selectedCategory?.rawValue ?? "All"
     }
 
     var body: some View {
@@ -17,22 +35,35 @@ struct SovaBottomBar: View {
             Menu {
                 Button {
                     selectedCategory = nil
+                    onCustomCategorySelected?(nil)
                 } label: {
                     Label("All", systemImage: "square.grid.2x2")
                 }
 
                 ForEach(visibleCategories) { category in
                     Button {
+                        onCustomCategorySelected?(nil)
                         selectedCategory = category
                     } label: {
                         Label(category.rawValue, systemImage: category.symbolName)
                     }
                 }
+                if !customCategories.isEmpty {
+                    Divider()
+                    ForEach(customCategories) { custom in
+                        Button {
+                            selectedCategory = nil
+                            onCustomCategorySelected?(custom.id)
+                        } label: {
+                            Label(custom.name, systemImage: custom.symbolName)
+                        }
+                    }
+                }
             } label: {
                 VStack(spacing: 4) {
-                    Image(systemName: selectedCategory?.symbolName ?? "square.grid.2x2")
+                    Image(systemName: filterIcon)
                         .font(.title3)
-                    Text(selectedCategory?.rawValue ?? "All")
+                    Text(filterLabel)
                         .font(SovaFont.mono(.caption2))
                 }
                 .foregroundStyle(.sovaPrimaryText)

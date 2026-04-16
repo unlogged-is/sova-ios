@@ -14,6 +14,10 @@ final class MaintenanceItem {
     var notes: String = ""
     var customFieldsJSON: String?
     var coverPhotoIndex: Int?
+    var customCategoryID: UUID?
+    var customCategoryName: String?
+    var customCategorySymbol: String?
+    var customCategoryTint: String?
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
     @Relationship(deleteRule: .cascade, inverse: \ItemPhoto.item) var photos: [ItemPhoto]?
@@ -46,8 +50,24 @@ final class MaintenanceItem {
     }
 
     var category: SovaCategory {
-        get { SovaCategory(rawValue: categoryRawValue) ?? .car }
+        get { SovaCategory(rawValue: categoryRawValue) ?? .other }
         set { categoryRawValue = newValue.rawValue }
+    }
+
+    var isCustomCategory: Bool {
+        customCategoryID != nil
+    }
+
+    var displayCategoryName: String {
+        customCategoryName ?? category.rawValue
+    }
+
+    var displayCategorySymbol: String {
+        customCategorySymbol ?? category.symbolName
+    }
+
+    var displayCategoryTint: String {
+        customCategoryTint ?? category.tintName
     }
 
     var photoData: [Data] {

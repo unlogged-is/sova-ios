@@ -9,6 +9,8 @@ struct SettingsView: View {
     @AppStorage("hiddenCategories") private var hiddenCategoriesRaw: String = ""
     @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = true
     @AppStorage("usesMetricUnits") private var usesMetricUnits: Bool = false
+    @State private var showPaywall: Bool = false
+    private var store: StoreManager { .shared }
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -21,6 +23,40 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                Section {
+                    Button {
+                        if store.isPro {
+                            // Already pro — nothing to do
+                        } else {
+                            showPaywall = true
+                        }
+                    } label: {
+                        HStack(spacing: 14) {
+                            Image(systemName: store.isPro ? "crown.fill" : "crown")
+                                .font(.title2)
+                                .foregroundStyle(.sovaWarmAccent)
+                                .frame(width: 32)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(store.isPro ? "Sova Pro" : "Upgrade to Pro")
+                                    .font(SovaFont.body(.headline, weight: .semibold))
+                                    .foregroundStyle(.sovaPrimaryText)
+                                Text(store.isPro ? "You have full access" : "Unlimited items, scanning & more")
+                                    .font(SovaFont.mono(.caption))
+                                    .foregroundStyle(.sovaSecondaryText)
+                            }
+                            Spacer()
+                            if !store.isPro {
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.sovaSecondaryText)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Subscription")
+                        .font(SovaFont.mono(.caption2))
+                }
+
                 Section {
                     Toggle(isOn: $swipeToDeleteEnabled) {
                         Label("Swipe to delete", systemImage: "hand.draw")
@@ -130,6 +166,11 @@ struct SettingsView: View {
                         dismiss()
                     }
                 }
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
             }
         }
     }

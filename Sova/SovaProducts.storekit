@@ -1,0 +1,78 @@
+{
+  "identifier" : "8A9B3C4D-1E2F-3A4B-5C6D-7E8F9A0B1C2D",
+  "type" : "Configuration",
+  "version" : 3,
+  "localizations" : [],
+  "settings" : {
+    "_applicationInternalID" : "0",
+    "_developerTeamID" : ""
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "sovapro",
+      "localizations" : [],
+      "name" : "Sova Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "2.99",
+          "familyShareable" : true,
+          "groupNumber" : 1,
+          "internalID" : "sova_pro_monthly_001",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlimited items, document scanning, warranties & receipts",
+              "displayName" : "Sova Pro Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "sova_pro_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Sova Pro Monthly",
+          "subscriptionGroupID" : "sovapro",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "19.99",
+          "familyShareable" : true,
+          "groupNumber" : 1,
+          "internalID" : "sova_pro_yearly_001",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlimited items, document scanning, warranties & receipts",
+              "displayName" : "Sova Pro Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "sova_pro_yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Sova Pro Yearly",
+          "subscriptionGroupID" : "sovapro",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "products" : [
+    {
+      "displayPrice" : "49.99",
+      "familyShareable" : true,
+      "internalID" : "sova_pro_lifetime_001",
+      "localizations" : [
+        {
+          "description" : "Unlimited items, document scanning, warranties & receipts. One-time purchase.",
+          "displayName" : "Sova Pro Lifetime",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "sova_pro_lifetime",
+      "referenceName" : "Sova Pro Lifetime",
+      "type" : "NonConsumable"
+    }
+  ]
+}

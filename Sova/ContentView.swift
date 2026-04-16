@@ -23,6 +23,12 @@ struct ContentView: View {
     @State private var showDeleteConfirmation: Bool = false
     @State private var activeSwipeID: PersistentIdentifier?
     @State private var isOverdueCollapsed: Bool = false
+    @State private var showPaywall: Bool = false
+    @State private var showCreateCategory: Bool = false
+    @State private var selectedCustomCategory: CustomCategory?
+    @State private var customCategoryFilterID: UUID?
+    @Query(sort: \CustomCategory.createdAt) private var customCategories: [CustomCategory]
+    private var store: StoreManager { .shared }
     @State private var isComingDueCollapsed: Bool = false
     @AppStorage("swipeToDeleteEnabled") private var swipeToDeleteEnabled: Bool = true
     @AppStorage("hiddenCategories") private var hiddenCategoriesRaw: String = ""
@@ -38,6 +44,9 @@ struct ContentView: View {
     }
 
     private var filteredItems: [MaintenanceItem] {
+        if let customID = customCategoryFilterID {
+            return visibleItems.filter { $0.customCategoryID == customID }
+        }
         guard let selectedCategory else { return visibleItems }
         return visibleItems.filter { $0.category == selectedCategory }
     }
@@ -127,6 +136,9 @@ struct ContentView: View {
                 SovaBottomBar(
                     selectedCategory: $selectedCategory,
                     hiddenCategories: hiddenCategorySet,
+                    customCategories: customCategories,
+                    selectedCustomCategoryFilter: customCategoryFilterID,
+                    onCustomCategorySelected: { id in customCategoryFilterID = id },
                     isPickerOpen: showCategoryPicker,
                     onAddTapped: {
                         withAnimation(SovaAccessibility.animation(.spring(duration: 0.35, bounce: 0.2))) {
@@ -151,6 +163,22 @@ struct ContentView: View {
                 SettingsView()
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showCreateCategory) {
+                CreateCustomCategoryView()
+                    .presentationDetents([.medium])
+                    .presentationDragIndicator(.visible)
+            }
+            .sheet(item: $selectedCustomCategory) { custom in
+                AddItemView(initialCategory: .other, customCategory: custom)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+                    .presentationContentInteraction(.scrolls)
             }
             .onOpenURL { url in
                 guard url.scheme == "sova",
@@ -188,7 +216,14 @@ struct ContentView: View {
 
     private var visibleCategories: [SovaCategory] {
         let hidden = hiddenCategorySet
-        return SovaCategory.allCases.filter { !hidden.contains($0.rawValue) }
+        return SovaCategory.allCases.filter { $0 != .other && !hidden.contains($0.rawValue) }
+    }
+
+    private func dismissPickerThenRun(_ action: @escaping () -> Void) {
+        withAnimation(SovaAccessibility.animation(.spring(duration: 0.35, bounce: 0.2))) {
+            showCategoryPicker = false
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: action)
     }
 
     private var categoryPickerOverlay: some View {
@@ -209,29 +244,98 @@ struct ContentView: View {
                     .foregroundStyle(.sovaPrimaryText)
 
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 12)], spacing: 12) {
+                    // Built-in categories
                     ForEach(visibleCategories) { category in
+                        let isProCategory = category == .warranty || category == .receipt
+                        let isLocked = isProCategory && !store.isPro
                         Button {
-                            withAnimation(SovaAccessibility.animation(.spring(duration: 0.35, bounce: 0.2))) {
-                                showCategoryPicker = false
-                            }
-                            // Small delay so the picker dismisses before the sheet appears
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                                selectedNewCategory = category
+                            if isLocked || (!store.isPro && items.count >= StoreManager.freeItemLimit) {
+                                dismissPickerThenRun { showPaywall = true }
+                            } else {
+                                dismissPickerThenRun { selectedNewCategory = category }
                             }
                         } label: {
                             VStack(spacing: 8) {
-                                Image(systemName: category.symbolName)
-                                    .font(.title3)
-                                    .foregroundStyle(.sovaPrimaryAccent)
-                                    .frame(width: 44, height: 44)
-                                    .background(Color.sovaPrimaryAccent.opacity(0.12), in: .circle)
+                                ZStack(alignment: .topTrailing) {
+                                    Image(systemName: category.symbolName)
+                                        .font(.title3)
+                                        .foregroundStyle(isLocked ? .sovaSecondaryText : .sovaPrimaryAccent)
+                                        .frame(width: 44, height: 44)
+                                        .background(
+                                            (isLocked ? Color.sovaSecondaryText : Color.sovaPrimaryAccent).opacity(0.12),
+                                            in: .circle
+                                        )
+                                    if isLocked {
+                                        Image(systemName: "lock.fill")
+                                            .font(.system(size: 9, weight: .bold))
+                                            .foregroundStyle(.sovaSecondaryText)
+                                            .offset(x: 2, y: -2)
+                                    }
+                                }
                                 Text(category.rawValue)
+                                    .font(SovaFont.mono(.caption2))
+                                    .foregroundStyle(isLocked ? .sovaSecondaryText : .sovaPrimaryText)
+                                    .lineLimit(1)
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
+
+                    // Custom categories
+                    ForEach(customCategories) { custom in
+                        Button {
+                            if !store.isPro && items.count >= StoreManager.freeItemLimit {
+                                dismissPickerThenRun { showPaywall = true }
+                            } else {
+                                dismissPickerThenRun { selectedCustomCategory = custom }
+                            }
+                        } label: {
+                            VStack(spacing: 8) {
+                                Image(systemName: custom.symbolName)
+                                    .font(.title3)
+                                    .foregroundStyle(custom.tintColor)
+                                    .frame(width: 44, height: 44)
+                                    .background(custom.tintColor.opacity(0.12), in: .circle)
+                                Text(custom.name)
                                     .font(SovaFont.mono(.caption2))
                                     .foregroundStyle(.sovaPrimaryText)
                                     .lineLimit(1)
                             }
                             .frame(maxWidth: .infinity)
                         }
+                    }
+
+                    // Create custom category button
+                    Button {
+                        if !store.isPro {
+                            dismissPickerThenRun { showPaywall = true }
+                        } else {
+                            dismissPickerThenRun { showCreateCategory = true }
+                        }
+                    } label: {
+                        VStack(spacing: 8) {
+                            ZStack(alignment: .topTrailing) {
+                                Image(systemName: "plus")
+                                    .font(.title3)
+                                    .foregroundStyle(!store.isPro ? .sovaSecondaryText : .sovaPrimaryAccent)
+                                    .frame(width: 44, height: 44)
+                                    .background(
+                                        (!store.isPro ? Color.sovaSecondaryText : Color.sovaPrimaryAccent).opacity(0.12),
+                                        in: .circle
+                                    )
+                                if !store.isPro {
+                                    Image(systemName: "lock.fill")
+                                        .font(.system(size: 9, weight: .bold))
+                                        .foregroundStyle(.sovaSecondaryText)
+                                        .offset(x: 2, y: -2)
+                                }
+                            }
+                            Text("Custom")
+                                .font(SovaFont.mono(.caption2))
+                                .foregroundStyle(!store.isPro ? .sovaSecondaryText : .sovaPrimaryText)
+                                .lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity)
                     }
                 }
             }
@@ -438,7 +542,7 @@ private struct DueItemRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: item.category.symbolName)
+            Image(systemName: item.displayCategorySymbol)
                 .font(.title3)
                 .foregroundStyle(accentColor)
                 .frame(width: 44, height: 44)
@@ -520,7 +624,7 @@ private struct InventoryCard: View {
                     .font(SovaFont.mono(.caption, weight: .medium))
                     .foregroundStyle(statusColor)
                 Spacer()
-                Image(systemName: item.category.symbolName)
+                Image(systemName: item.displayCategorySymbol)
                     .font(.body)
                     .foregroundStyle(statusColor)
             }
@@ -571,7 +675,7 @@ private struct InventoryCard: View {
                     .clipShape(.rect(cornerRadius: 18))
                     .accessibilityHidden(true)
             } else {
-                Image(systemName: item.category.symbolName)
+                Image(systemName: item.displayCategorySymbol)
                     .font(.title2)
                     .foregroundStyle(statusColor)
                     .frame(width: 72, height: 72)

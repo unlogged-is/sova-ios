@@ -91,7 +91,7 @@ struct ItemDetailView: View {
     private var headerCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top) {
-                Label(item.category.rawValue, systemImage: item.category.symbolName)
+                Label(item.displayCategoryName, systemImage: item.displayCategorySymbol)
                     .font(SovaFont.mono(.caption, weight: .medium))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
@@ -220,7 +220,7 @@ struct ItemDetailView: View {
 
     private var categoryDetailsCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("\(item.category.rawValue) Details")
+            Text("\(item.displayCategoryName) Details")
                 .font(SovaFont.title(.title3))
                 .foregroundStyle(.sovaPrimaryText)
 

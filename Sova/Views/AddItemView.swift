@@ -10,6 +10,9 @@ struct AddItemView: View {
 
     var itemToEdit: MaintenanceItem?
     var initialCategory: SovaCategory = .car
+    var customCategory: CustomCategory?
+    private var store: StoreManager { .shared }
+    @State private var showPaywall: Bool = false
 
     @State private var title: String = ""
     @State private var itemDescription: String = ""
@@ -90,10 +93,20 @@ struct AddItemView: View {
                         TextField("Item name", text: $title)
                             .font(SovaFont.body(.body))
                     }
-                    Picker("Category", selection: $category) {
-                        ForEach(SovaCategory.allCases) { category in
-                            Label(category.rawValue, systemImage: category.symbolName)
-                                .tag(category)
+                    if let custom = customCategory {
+                        HStack {
+                            Text("Category")
+                            Spacer()
+                            Label(custom.name, systemImage: custom.symbolName)
+                                .font(SovaFont.body(.body))
+                                .foregroundStyle(.sovaSecondaryText)
+                        }
+                    } else {
+                        Picker("Category", selection: $category) {
+                            ForEach(SovaCategory.allCases.filter { $0 != .other }) { category in
+                                Label(category.rawValue, systemImage: category.symbolName)
+                                    .tag(category)
+                            }
                         }
                     }
                 }
@@ -250,6 +263,11 @@ struct AddItemView: View {
                     .ignoresSafeArea()
                 }
             }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            }
             .alert("Camera Access Required", isPresented: $showCameraDeniedAlert) {
                 Button("Open Settings") {
                     if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -342,9 +360,21 @@ struct AddItemView: View {
             .disabled(photoData.count >= 6)
 
             Button {
-                activeFullScreen = .documentScanner
+                if store.isPro {
+                    activeFullScreen = .documentScanner
+                } else {
+                    showPaywall = true
+                }
             } label: {
-                Label("Scan document", systemImage: "doc.viewfinder")
+                HStack {
+                    Label("Scan document", systemImage: "doc.viewfinder")
+                    if !store.isPro {
+                        Spacer()
+                        Image(systemName: "lock.fill")
+                            .font(.caption)
+                            .foregroundStyle(.sovaSecondaryText)
+                    }
+                }
             }
             .disabled(photoData.count >= 6 || !VNDocumentCameraViewController.isSupported)
 
@@ -431,6 +461,12 @@ struct AddItemView: View {
             existing.title = trimmedTitle
             existing.itemDescription = trimmedDescription
             existing.categoryRawValue = category.rawValue
+            if let custom = customCategory {
+                existing.customCategoryID = custom.id
+                existing.customCategoryName = custom.name
+                existing.customCategorySymbol = custom.symbolName
+                existing.customCategoryTint = custom.tintName
+            }
             existing.purchaseDate = hasPurchaseDate ? purchaseDate : nil
             existing.notes = trimmedNotes
             existing.updatedAt = .now
@@ -463,6 +499,14 @@ struct AddItemView: View {
                 notes: trimmedNotes,
                 updatedAt: .now
             )
+
+            // Custom category
+            if let custom = customCategory {
+                item.customCategoryID = custom.id
+                item.customCategoryName = custom.name
+                item.customCategorySymbol = custom.symbolName
+                item.customCategoryTint = custom.tintName
+            }
 
             // Custom fields
             item.customFields = customFieldValues

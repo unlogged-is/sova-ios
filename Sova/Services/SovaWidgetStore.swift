@@ -60,8 +60,8 @@ enum SovaWidgetStore {
                 .replacingOccurrences(of: "=", with: "")
             return SovaWidgetItem(
                 title: item.title,
-                category: item.category.rawValue,
-                categorySymbol: item.category.symbolName,
+                category: item.displayCategoryName,
+                categorySymbol: item.displayCategorySymbol,
                 serviceName: item.nextUpcomingReminder?.name ?? "",
                 dueText: item.nextDueLabel,
                 isOverdue: item.status == .overdue,
@@ -74,7 +74,7 @@ enum SovaWidgetStore {
             overdueCount: overdueItems.count,
             dueSoonCount: dueSoonItems.count,
             nextTitle: nextItem?.title ?? "All set",
-            nextCategory: nextItem?.category.rawValue ?? "Sova",
+            nextCategory: nextItem?.displayCategoryName ?? "Sova",
             nextDueText: nextItem?.nextDueLabel ?? "Nothing due soon",
             items: widgetItems,
             updatedAt: .now

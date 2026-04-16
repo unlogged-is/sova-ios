@@ -86,16 +86,11 @@ struct OnboardingView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
 
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 16) {
                 featureRow(
                     icon: "calendar.badge.clock",
                     title: "Maintenance tracking",
                     subtitle: "Know what's due and when"
-                )
-                featureRow(
-                    icon: "photo.on.rectangle.angled",
-                    title: "Photos & notes",
-                    subtitle: "Keep receipts, warranty info, and details"
                 )
                 featureRow(
                     icon: "bell.badge.fill",
@@ -103,14 +98,27 @@ struct OnboardingView: View {
                     subtitle: "Get notified before services are due"
                 )
                 featureRow(
-                    icon: "car.fill",
-                    title: "Vehicle management",
-                    subtitle: "Track mileage, services, and costs per car"
-                )
-                featureRow(
                     icon: "icloud.fill",
                     title: "Synced everywhere",
-                    subtitle: "Your data backed up with iCloud, synced across devices"
+                    subtitle: "Your data backed up and synced across devices"
+                )
+                featureRow(
+                    icon: "infinity",
+                    title: "Unlimited items",
+                    subtitle: "Track everything you own, no limits",
+                    isPro: true
+                )
+                featureRow(
+                    icon: "doc.viewfinder",
+                    title: "Document scanning",
+                    subtitle: "Scan receipts, warranties, and manuals",
+                    isPro: true
+                )
+                featureRow(
+                    icon: "folder.badge.plus",
+                    title: "Custom categories",
+                    subtitle: "Organize your way with custom icons and colors",
+                    isPro: true
                 )
             }
             .padding(.horizontal, 8)
@@ -173,7 +181,7 @@ struct OnboardingView: View {
                 .font(.system(size: 56))
                 .foregroundStyle(.sovaPrimaryAccent)
 
-            Text("Add your first car")
+            Text("Add your car")
                 .font(SovaFont.title(.title2))
                 .foregroundStyle(.sovaPrimaryText)
 
@@ -318,7 +326,7 @@ struct OnboardingView: View {
         }
     }
 
-    private func featureRow(icon: String, title: String, subtitle: String) -> some View {
+    private func featureRow(icon: String, title: String, subtitle: String, isPro: Bool = false) -> some View {
         HStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.title2)
@@ -327,9 +335,16 @@ struct OnboardingView: View {
                 .background(.sovaPrimaryAccent.opacity(0.14), in: .circle)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(SovaFont.body(.headline, weight: .semibold))
-                    .foregroundStyle(.sovaPrimaryText)
+                HStack(spacing: 6) {
+                    Text(title)
+                        .font(SovaFont.body(.headline, weight: .semibold))
+                        .foregroundStyle(.sovaPrimaryText)
+                    if isPro {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.sovaWarmAccent)
+                    }
+                }
                 Text(subtitle)
                     .font(SovaFont.body(.subheadline))
                     .foregroundStyle(.sovaSecondaryText)

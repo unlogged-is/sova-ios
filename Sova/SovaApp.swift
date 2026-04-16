@@ -30,6 +30,7 @@ struct SovaApp: App {
             MaintenanceItem.self,
             ItemPhoto.self,
             ItemReminder.self,
+            CustomCategory.self,
         ])
         let configuration = ModelConfiguration(
             schema: schema,
