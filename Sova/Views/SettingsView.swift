@@ -151,10 +151,19 @@ struct SettingsView: View {
                                 .foregroundStyle(.sovaSecondaryText)
                         }
                     }
+
+                    NavigationLink {
+                        LegalSettingsView()
+                    } label: {
+                        Label("Legal", systemImage: "doc.text")
+                            .font(SovaFont.body(.body))
+                            .foregroundStyle(.sovaPrimaryText)
+                    }
                 } header: {
                     Text("About")
                         .font(SovaFont.mono(.caption2))
                 }
+
             }
             .scrollContentBackground(.hidden)
             .background(.sovaBackground)
@@ -183,9 +192,6 @@ private struct NotificationSettingsView: View {
     @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = true
     @AppStorage("notificationAdvanceDays") private var advanceDays: Int = 7
     @AppStorage("notificationHour") private var notificationHour: Int = 9
-    @State private var showTestConfirmation: Bool = false
-    @State private var testNotificationSent: Bool = false
-
     private let advanceDayOptions = [1, 2, 3, 5, 7, 14]
     private let hourRange = 6...21
 
@@ -220,19 +226,6 @@ private struct NotificationSettingsView: View {
             }
 
             if notificationsEnabled {
-                Section {
-                    Button {
-                        showTestConfirmation = true
-                    } label: {
-                        Label("Send test notification", systemImage: "bell.and.waves.left.and.right")
-                            .font(SovaFont.body(.body))
-                            .foregroundStyle(.sovaPrimaryAccent)
-                    }
-                } header: {
-                    Text("Test")
-                        .font(SovaFont.mono(.caption2))
-                }
-
                 Section {
                     Picker(selection: $advanceDays) {
                         ForEach(advanceDayOptions, id: \.self) { days in
@@ -273,40 +266,6 @@ private struct NotificationSettingsView: View {
         .background(.sovaBackground)
         .navigationTitle("Notifications")
         .navigationBarTitleDisplayMode(.inline)
-        .alert("Send test notifications?", isPresented: $showTestConfirmation) {
-            Button("Send") {
-                sendTestNotifications()
-                testNotificationSent = true
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Two test notifications will be sent — one in 5 seconds and another in 10 seconds. Lock or background the app to see them.")
-        }
-        .alert("Notifications scheduled", isPresented: $testNotificationSent) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Lock or background the app now. You'll receive a \"coming due\" notification in about 5 seconds and a \"due today\" notification in about 10 seconds.")
-        }
-    }
-
-    private func sendTestNotifications() {
-        let center = UNUserNotificationCenter.current()
-
-        // "Coming due" — fires in 5 seconds
-        let advanceContent = UNMutableNotificationContent()
-        advanceContent.title = "2022 Subaru Outback"
-        advanceContent.body = "Oil Change is due in \(advanceDays) day\(advanceDays == 1 ? "" : "s")"
-        advanceContent.sound = .default
-        let advanceTrigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
-        center.add(UNNotificationRequest(identifier: "sova-test-advance", content: advanceContent, trigger: advanceTrigger))
-
-        // "Due today" — fires in 10 seconds
-        let dueContent = UNMutableNotificationContent()
-        dueContent.title = "2022 Subaru Outback"
-        dueContent.body = "Oil Change is due today"
-        dueContent.sound = .default
-        let dueTrigger = UNTimeIntervalNotificationTrigger(timeInterval: 10, repeats: false)
-        center.add(UNNotificationRequest(identifier: "sova-test-due", content: dueContent, trigger: dueTrigger))
     }
 }
 

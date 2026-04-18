@@ -32,6 +32,8 @@ struct ContentView: View {
     @State private var isComingDueCollapsed: Bool = false
     @AppStorage("swipeToDeleteEnabled") private var swipeToDeleteEnabled: Bool = true
     @AppStorage("hiddenCategories") private var hiddenCategoriesRaw: String = ""
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    private var isRegularWidth: Bool { horizontalSizeClass == .regular }
 
     private var hiddenCategorySet: Set<String> {
         Set(hiddenCategoriesRaw.split(separator: ",").map(String.init))
@@ -81,10 +83,19 @@ struct ContentView: View {
                     searchBar
                     if !items.isEmpty {
                         if searchText.isEmpty {
-                            if !overdueItems.isEmpty {
-                                overdueSection
+                            if isRegularWidth {
+                                HStack(alignment: .top, spacing: 16) {
+                                    overdueSection
+                                        .frame(maxWidth: .infinity)
+                                    comingDueSection
+                                        .frame(maxWidth: .infinity)
+                                }
+                            } else {
+                                if !overdueItems.isEmpty {
+                                    overdueSection
+                                }
+                                comingDueSection
                             }
-                            comingDueSection
                         }
                         inventorySection
                     }
@@ -152,6 +163,7 @@ struct ContentView: View {
                         }
                     }
                 )
+                .frame(maxWidth: isRegularWidth ? 500 : .infinity)
             }
             .sheet(item: $selectedNewCategory) { category in
                 AddItemView(initialCategory: category)
@@ -341,6 +353,7 @@ struct ContentView: View {
             }
             .padding(20)
             .modifier(GlassPickerBackgroundModifier())
+            .frame(maxWidth: isRegularWidth ? 500 : .infinity)
             .padding(.horizontal, 40)
             .padding(.bottom, 30)
             .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -371,6 +384,8 @@ struct ContentView: View {
         .padding(.vertical, 12)
         .background(.sovaSurface, in: .rect(cornerRadius: 16))
         .sovaCard(cornerRadius: 16)
+        .frame(maxWidth: isRegularWidth ? 600 : .infinity)
+        .frame(maxWidth: .infinity)
         .opacity(items.isEmpty ? 0 : 1)
         .disabled(items.isEmpty)
     }
@@ -397,14 +412,26 @@ struct ContentView: View {
             .buttonStyle(.plain)
 
             if !isOverdueCollapsed {
-                VStack(spacing: 12) {
-                    ForEach(overdueItems) { item in
-                        Button {
-                            path.append(.detail(item.persistentModelID))
-                        } label: {
-                            DueItemRow(item: item, isOverdue: true)
+                if overdueItems.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("All clear")
+                            .font(SovaFont.title(.headline))
+                            .foregroundStyle(.sovaSecondaryText)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(20)
+                    .background(.sovaSurface, in: .rect(cornerRadius: 26))
+                    .sovaCard()
+                } else {
+                    VStack(spacing: 12) {
+                        ForEach(overdueItems) { item in
+                            Button {
+                                path.append(.detail(item.persistentModelID))
+                            } label: {
+                                DueItemRow(item: item, isOverdue: true)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -477,6 +504,17 @@ struct ContentView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 32)
+            } else if isRegularWidth {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                    ForEach(displayItems) { item in
+                        Button {
+                            path.append(.detail(item.persistentModelID))
+                        } label: {
+                            InventoryCard(item: item)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             } else {
                 LazyVStack(spacing: 12) {
                     ForEach(displayItems) { item in

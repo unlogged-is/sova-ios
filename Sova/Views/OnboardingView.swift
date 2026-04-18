@@ -5,6 +5,7 @@ import UserNotifications
 struct OnboardingView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var currentPage: Int = 0
 
     // Car fields for onboarding
@@ -67,6 +68,7 @@ struct OnboardingView: View {
             continueButton { withAnimation { currentPage = 1 } }
                 .padding(.bottom, 72)
         }
+        .frame(maxWidth: horizontalSizeClass == .regular ? 540 : .infinity)
         .padding(.horizontal, 24)
     }
 
@@ -128,6 +130,7 @@ struct OnboardingView: View {
             continueButton { withAnimation { currentPage = 2 } }
                 .padding(.bottom, 72)
         }
+        .frame(maxWidth: horizontalSizeClass == .regular ? 540 : .infinity)
         .padding(.horizontal, 24)
     }
 
@@ -168,6 +171,7 @@ struct OnboardingView: View {
             }
             .padding(.bottom, 72)
         }
+        .frame(maxWidth: horizontalSizeClass == .regular ? 540 : .infinity)
         .padding(.horizontal, 24)
     }
 
@@ -253,6 +257,7 @@ struct OnboardingView: View {
             }
             .padding(.bottom, 72)
         }
+        .frame(maxWidth: horizontalSizeClass == .regular ? 540 : .infinity)
         .padding(.horizontal, 24)
     }
 
@@ -320,7 +325,7 @@ struct OnboardingView: View {
             Text(title)
                 .font(SovaFont.body(.headline, weight: .semibold))
                 .foregroundStyle(.sovaBackground)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: horizontalSizeClass == .regular ? 400 : .infinity)
                 .padding(.vertical, 16)
                 .background(.sovaPrimaryAccent, in: .rect(cornerRadius: 16))
         }

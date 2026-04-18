@@ -7,6 +7,7 @@ struct PaywallView: View {
 
     @State private var selectedProduct: Product?
     @State private var isPurchasing: Bool = false
+    @State private var loadFailed: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -15,7 +16,6 @@ struct PaywallView: View {
                     header
                     features
                     plans
-                    testingBanner
                     purchaseButton
                     footer
                 }
@@ -36,6 +36,9 @@ struct PaywallView: View {
         .task {
             if store.products.isEmpty {
                 await store.loadProducts()
+                if store.products.isEmpty {
+                    loadFailed = true
+                }
             }
             if selectedProduct == nil {
                 selectedProduct = store.yearlyProduct
@@ -100,11 +103,32 @@ struct PaywallView: View {
 
     private var plans: some View {
         VStack(spacing: 10) {
-            if store.products.isEmpty {
+            if store.products.isEmpty && !loadFailed {
                 ProgressView("Loading plans...")
                     .font(SovaFont.body(.subheadline))
                     .foregroundStyle(.sovaSecondaryText)
                     .padding(.vertical, 20)
+            }
+            if store.products.isEmpty && loadFailed {
+                VStack(spacing: 8) {
+                    Text("Unable to load plans")
+                        .font(SovaFont.body(.subheadline, weight: .semibold))
+                        .foregroundStyle(.sovaPrimaryText)
+                    Text("Check your connection and try again.")
+                        .font(SovaFont.mono(.caption))
+                        .foregroundStyle(.sovaSecondaryText)
+                    Button("Retry") {
+                        loadFailed = false
+                        Task {
+                            await store.loadProducts()
+                            if store.products.isEmpty { loadFailed = true }
+                        }
+                    }
+                    .font(SovaFont.body(.subheadline, weight: .semibold))
+                    .foregroundStyle(.sovaPrimaryAccent)
+                    .padding(.top, 4)
+                }
+                .padding(.vertical, 20)
             }
             if let monthly = store.monthlyProduct {
                 planCard(
@@ -218,17 +242,6 @@ struct PaywallView: View {
     }
 
     // MARK: - Footer
-
-    // TODO: Remove before release
-    private var testingBanner: some View {
-        Text("🧪 Testing mode — no charges will be made")
-            .font(SovaFont.mono(.caption, weight: .medium))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity)
-            .background(.orange, in: .rect(cornerRadius: 12))
-    }
 
     private var footer: some View {
         VStack(spacing: 8) {
