@@ -39,8 +39,9 @@ struct AddItemView: View {
     // Category-specific fields
     @State private var customFieldValues: [String: String] = [:]
 
-    // Home-specific rooms
+    // Home-specific
     @State private var roomDrafts: [RoomDraft] = []
+    @State private var addressRegion: AddressRegion = .detect()
 
     // Reminders
     @State private var reminderDrafts: [ReminderDraft] = []
@@ -208,14 +209,21 @@ struct AddItemView: View {
             .onAppear {
                 if itemToEdit == nil {
                     category = initialCategory
+                    if initialCategory == .home {
+                        customFieldValues[HomeFieldKeys.region] = addressRegion.rawValue
+                    }
                 }
                 populateFromItem()
             }
-            .onChange(of: category) { _, _ in
+            .onChange(of: category) { _, newCategory in
                 // Clear custom fields when category changes (unless editing)
                 if !isEditing {
                     customFieldValues = [:]
                     roomDrafts = []
+                    if newCategory == .home {
+                        addressRegion = .detect()
+                        customFieldValues[HomeFieldKeys.region] = addressRegion.rawValue
+                    }
                 }
             }
             .onChange(of: photoData.count) { _, newCount in
@@ -401,17 +409,31 @@ struct AddItemView: View {
 
     private var homeAddressSection: some View {
         Section("Address") {
-            TextField("Street", text: fieldBinding(for: HomeFieldKeys.street))
-                .font(SovaFont.body(.body))
-            TextField("City", text: fieldBinding(for: HomeFieldKeys.city))
-                .font(SovaFont.body(.body))
-            HStack {
-                TextField("State", text: fieldBinding(for: HomeFieldKeys.state))
-                    .font(SovaFont.body(.body))
-                TextField("ZIP", text: fieldBinding(for: HomeFieldKeys.zip))
-                    .font(SovaFont.body(.body))
-                    .keyboardType(.numberPad)
+            Picker("Region", selection: $addressRegion) {
+                ForEach(AddressRegion.allCases) { region in
+                    Text(region.rawValue).tag(region)
+                }
             }
+
+            ForEach(Array(addressRegion.fieldRows.enumerated()), id: \.offset) { _, row in
+                if row.count == 1 {
+                    let field = row[0]
+                    TextField(field.label, text: fieldBinding(for: field.key))
+                        .font(SovaFont.body(.body))
+                        .keyboardType(field.numeric ? .numberPad : .default)
+                } else {
+                    HStack {
+                        ForEach(Array(row.enumerated()), id: \.offset) { _, field in
+                            TextField(field.label, text: fieldBinding(for: field.key))
+                                .font(SovaFont.body(.body))
+                                .keyboardType(field.numeric ? .numberPad : .default)
+                        }
+                    }
+                }
+            }
+        }
+        .onChange(of: addressRegion) { _, newRegion in
+            customFieldValues[HomeFieldKeys.region] = newRegion.rawValue
         }
     }
 
@@ -799,8 +821,12 @@ struct AddItemView: View {
         customFieldValues = item.customFields
         reminderDrafts = (item.reminders ?? []).map { ReminderDraft(from: $0) }
 
-        // Populate room drafts for Home items
+        // Populate Home-specific state
         if item.category == .home {
+            if let regionRaw = item.customFields[HomeFieldKeys.region],
+               let savedRegion = AddressRegion(rawValue: regionRaw) {
+                addressRegion = savedRegion
+            }
             let fields = item.customFields
             if let countStr = fields[HomeFieldKeys.roomCount], let count = Int(countStr), count > 0 {
                 roomDrafts = (0..<count).map { i in

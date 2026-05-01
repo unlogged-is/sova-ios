@@ -155,6 +155,7 @@ enum HomeFieldKeys {
     static let city = "address_city"
     static let state = "address_state"
     static let zip = "address_zip"
+    static let region = "address_region"
     static let roomCount = "roomCount"
     static func roomName(_ index: Int) -> String { "room_\(index)_name" }
     static func roomSqft(_ index: Int) -> String { "room_\(index)_sqft" }
@@ -162,6 +163,115 @@ enum HomeFieldKeys {
     // Legacy keys
     static let legacyAreaRoom = "areaRoom"
     static let legacySquareFootage = "squareFootage"
+}
+
+// MARK: - Address Region
+
+enum AddressRegion: String, CaseIterable, Identifiable {
+    case us = "US"
+    case uk = "UK"
+    case canada = "Canada"
+    case australia = "Australia"
+    case germany = "Germany"
+    case france = "France"
+    case japan = "Japan"
+    case other = "Other"
+
+    var id: String { rawValue }
+
+    /// Ordered rows of fields describing the address layout for this region.
+    /// Each row is an array of (key, label, numericKeyboard) tuples.
+    var fieldRows: [[(key: String, label: String, numeric: Bool)]] {
+        switch self {
+        // 123 Main St
+        // City, ST 12345
+        case .us:
+            [
+                [(HomeFieldKeys.street, "Street", false)],
+                [(HomeFieldKeys.city, "City", false),
+                 (HomeFieldKeys.state, "State", false),
+                 (HomeFieldKeys.zip, "ZIP Code", true)],
+            ]
+        // 123 Main St
+        // City
+        // County (optional)
+        // Postcode
+        case .uk:
+            [
+                [(HomeFieldKeys.street, "Street", false)],
+                [(HomeFieldKeys.city, "City / Town", false)],
+                [(HomeFieldKeys.state, "County", false),
+                 (HomeFieldKeys.zip, "Postcode", false)],
+            ]
+        // 123 Main St
+        // City, Province  Postal Code
+        case .canada:
+            [
+                [(HomeFieldKeys.street, "Street", false)],
+                [(HomeFieldKeys.city, "City", false),
+                 (HomeFieldKeys.state, "Province", false),
+                 (HomeFieldKeys.zip, "Postal Code", false)],
+            ]
+        // 123 Main St
+        // Suburb, State  Postcode
+        case .australia:
+            [
+                [(HomeFieldKeys.street, "Street", false)],
+                [(HomeFieldKeys.city, "Suburb", false),
+                 (HomeFieldKeys.state, "State", false),
+                 (HomeFieldKeys.zip, "Postcode", true)],
+            ]
+        // Straße Hausnummer
+        // PLZ  Stadt
+        case .germany:
+            [
+                [(HomeFieldKeys.street, "Straße", false)],
+                [(HomeFieldKeys.zip, "PLZ", true),
+                 (HomeFieldKeys.city, "Stadt", false)],
+            ]
+        // Numéro, Rue
+        // Code Postal  Ville
+        case .france:
+            [
+                [(HomeFieldKeys.street, "Adresse", false)],
+                [(HomeFieldKeys.zip, "Code Postal", true),
+                 (HomeFieldKeys.city, "Ville", false)],
+            ]
+        // 〒 Postal Code
+        // Prefecture  City
+        // Street / Block
+        case .japan:
+            [
+                [(HomeFieldKeys.zip, "Postal Code", true)],
+                [(HomeFieldKeys.state, "Prefecture", false),
+                 (HomeFieldKeys.city, "City", false)],
+                [(HomeFieldKeys.street, "Address", false)],
+            ]
+        // Street
+        // City, State/Region  Postal Code
+        case .other:
+            [
+                [(HomeFieldKeys.street, "Street", false)],
+                [(HomeFieldKeys.city, "City", false),
+                 (HomeFieldKeys.state, "State / Region", false),
+                 (HomeFieldKeys.zip, "Postal Code", false)],
+            ]
+        }
+    }
+
+    static func detect() -> AddressRegion {
+        guard let code = Locale.current.region?.identifier else { return .us }
+        switch code {
+        case "US": return .us
+        case "GB": return .uk
+        case "CA": return .canada
+        case "AU": return .australia
+        case "DE": return .germany
+        case "FR": return .france
+        case "JP": return .japan
+        default: return .other
+        }
+    }
 }
 
 // MARK: - Room Draft (for form editing)
