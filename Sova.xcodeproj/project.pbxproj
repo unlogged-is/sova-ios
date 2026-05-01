@@ -637,7 +637,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = SovaWidget/SovaWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2604271;
+				CURRENT_PROJECT_VERSION = 2605011;
 				DEVELOPMENT_TEAM = ZRQTPK7YCC;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "SovaWidget-Info.plist";
@@ -665,7 +665,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = SovaWidget/SovaWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2604271;
+				CURRENT_PROJECT_VERSION = 2605011;
 				DEVELOPMENT_TEAM = ZRQTPK7YCC;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "SovaWidget-Info.plist";
