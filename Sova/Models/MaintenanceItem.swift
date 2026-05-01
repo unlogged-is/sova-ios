@@ -162,7 +162,6 @@ nonisolated enum SovaCategory: String, CaseIterable, Identifiable, Codable, Send
     case car = "Car"
     case appliance = "Appliance"
     case hvac = "HVAC"
-    case roof = "Roof"
     case bike = "Bike"
     case home = "Home"
     case garden = "Garden"
@@ -180,8 +179,6 @@ nonisolated enum SovaCategory: String, CaseIterable, Identifiable, Codable, Send
             "washer.fill"
         case .hvac:
             "wind"
-        case .roof:
-            "house.lodge.fill"
         case .bike:
             "bicycle"
         case .home:
@@ -209,7 +206,7 @@ nonisolated enum SovaCategory: String, CaseIterable, Identifiable, Codable, Send
             "accentPrimary"
         case .receipt:
             "accentWarm"
-        case .roof, .other:
+        case .other:
             "textSecondary"
         }
     }

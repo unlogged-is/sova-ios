@@ -628,6 +628,10 @@ private struct InventoryCard: View {
             let parts = [fields["brand"], fields["modelNumber"]]
                 .compactMap { $0?.isEmpty == false ? $0 : nil }
             if !parts.isEmpty { return parts.joined(separator: " · ") }
+        case .home:
+            let parts = [fields[HomeFieldKeys.city], fields[HomeFieldKeys.state], fields[HomeFieldKeys.zip]]
+                .compactMap { $0?.isEmpty == false ? $0 : nil }
+            if !parts.isEmpty { return parts.joined(separator: ", ") }
         default:
             break
         }

@@ -40,23 +40,17 @@ struct CategoryFieldDefinition: Identifiable {
                 .init(key: "filterSize", label: "Filter Size", fieldType: .text),
                 .init(key: "seerRating", label: "SEER Rating", fieldType: .number),
             ]
-        case .roof:
-            [
-                .init(key: "material", label: "Material", fieldType: .text),
-                .init(key: "ageYears", label: "Age (years)", fieldType: .number),
-                .init(key: "warrantyExpiry", label: "Warranty Expiry", fieldType: .date),
-            ]
         case .bike:
             [
                 .init(key: "brand", label: "Brand", fieldType: .text),
                 .init(key: "model", label: "Model", fieldType: .text),
+                .init(key: "year", label: "Year", fieldType: .number),
                 .init(key: "frameSize", label: "Frame Size", fieldType: .text),
+                .init(key: "serialNumber", label: "Serial Number", fieldType: .text),
+                .init(key: "mileage", label: usesMetricUnits ? "Mileage (km)" : "Mileage (mi)", fieldType: .number),
             ]
         case .home:
-            [
-                .init(key: "areaRoom", label: "Area / Room", fieldType: .text),
-                .init(key: "squareFootage", label: "Square Footage", fieldType: .number),
-            ]
+            []
         case .garden:
             [
                 .init(key: "plantType", label: "Plant Type", fieldType: .text),
@@ -74,6 +68,8 @@ struct CategoryFieldDefinition: Identifiable {
                 .init(key: "store", label: "Store", fieldType: .text),
                 .init(key: "amount", label: "Amount", fieldType: .text),
                 .init(key: "receiptDate", label: "Receipt Date", fieldType: .date),
+                .init(key: "paymentMethod", label: "Payment Method", fieldType: .text),
+                .init(key: "returnBy", label: "Return By", fieldType: .date),
             ]
         case .other:
             []
@@ -94,12 +90,12 @@ extension SovaCategory {
             ["Cleaning", "Filter Replacement", "Inspection", "Repair", "Descaling"]
         case .hvac:
             ["Filter Change", "Inspection", "Coil Cleaning", "Refrigerant Check", "Duct Cleaning"]
-        case .roof:
-            ["Inspection", "Gutter Cleaning", "Repair", "Moss Treatment", "Sealant"]
         case .bike:
-            ["Tune-up", "Tire Change", "Chain Lube", "Brake Adjustment", "Cable Replacement"]
+            ["Tune-up", "Tire Change", "Chain Lube", "Brake Adjustment", "Cable Replacement",
+             "Wheel Truing", "Gear Adjustment", "Tire Pressure Check", "Full Service"]
         case .home:
-            ["Cleaning", "Repair", "Painting", "Inspection", "Pest Control"]
+            ["Cleaning", "Repair", "Painting", "Inspection", "Pest Control",
+             "Gutter Cleaning", "Roof Inspection", "Lawn Treatment"]
         case .garden:
             ["Watering", "Pruning", "Fertilizing", "Pest Treatment", "Mulching"]
         case .warranty:
@@ -149,5 +145,35 @@ struct ReminderDraft: Identifiable {
         self.lastServiceDate = reminder.lastServiceDate
         self.isComplete = reminder.isComplete
         self.existingReminder = reminder
+    }
+}
+
+// MARK: - Home Field Keys
+
+enum HomeFieldKeys {
+    static let street = "address_street"
+    static let city = "address_city"
+    static let state = "address_state"
+    static let zip = "address_zip"
+    static let roomCount = "roomCount"
+    static func roomName(_ index: Int) -> String { "room_\(index)_name" }
+    static func roomSqft(_ index: Int) -> String { "room_\(index)_sqft" }
+
+    // Legacy keys
+    static let legacyAreaRoom = "areaRoom"
+    static let legacySquareFootage = "squareFootage"
+}
+
+// MARK: - Room Draft (for form editing)
+
+struct RoomDraft: Identifiable {
+    let id: UUID
+    var name: String
+    var squareFootage: String
+
+    init(id: UUID = UUID(), name: String = "", squareFootage: String = "") {
+        self.id = id
+        self.name = name
+        self.squareFootage = squareFootage
     }
 }

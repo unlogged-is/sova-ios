@@ -52,9 +52,6 @@ struct SettingsView: View {
                             }
                         }
                     }
-                } header: {
-                    Text("Subscription")
-                        .font(SovaFont.mono(.caption2))
                 }
 
                 Section {
@@ -94,9 +91,6 @@ struct SettingsView: View {
                             .foregroundStyle(.sovaPrimaryText)
                     }
 
-                } header: {
-                    Text("General")
-                        .font(SovaFont.mono(.caption2))
                 }
 
                 Section {
@@ -118,10 +112,20 @@ struct SettingsView: View {
                             .font(SovaFont.body(.body))
                             .foregroundStyle(.sovaPrimaryText)
                     }
+                }
+
+                #if DEBUG
+                Section {
+                    Toggle(isOn: Bindable(store).debugOverridePro) {
+                        Label("Unlock Pro (Debug)", systemImage: "hammer.fill")
+                            .font(SovaFont.body(.body))
+                            .foregroundStyle(.sovaPrimaryText)
+                    }
                 } header: {
-                    Text("Display")
+                    Text("Developer")
                         .font(SovaFont.mono(.caption2))
                 }
+                #endif
 
                 Section {
                     VStack(alignment: .leading, spacing: 12) {
@@ -159,9 +163,6 @@ struct SettingsView: View {
                             .font(SovaFont.body(.body))
                             .foregroundStyle(.sovaPrimaryText)
                     }
-                } header: {
-                    Text("About")
-                        .font(SovaFont.mono(.caption2))
                 }
 
             }
@@ -220,9 +221,6 @@ private struct NotificationSettingsView: View {
                         NotificationManager.cancelAll()
                     }
                 }
-            } header: {
-                Text("Notifications")
-                    .font(SovaFont.mono(.caption2))
             }
 
             if notificationsEnabled {
@@ -247,9 +245,6 @@ private struct NotificationSettingsView: View {
                             .font(SovaFont.body(.body))
                             .foregroundStyle(.sovaPrimaryText)
                     }
-                } header: {
-                    Text("Timing")
-                        .font(SovaFont.mono(.caption2))
                 } footer: {
                     Text("You'll receive a reminder \(advanceDays) day\(advanceDays == 1 ? "" : "s") before each service is due, and again on the due date. Both notifications arrive at \(hourLabel(notificationHour)).")
                         .font(SovaFont.mono(.caption2))

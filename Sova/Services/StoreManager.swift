@@ -17,8 +17,20 @@ final class StoreManager {
     // MARK: - State
 
     private(set) var products: [Product] = []
-    private(set) var isPro: Bool = false
     private(set) var purchaseError: String?
+
+    #if DEBUG
+    /// Developer override — set to `true` to unlock all Pro features during development.
+    /// This flag is compiled out of release builds entirely.
+    var debugOverridePro: Bool = false
+
+    var isPro: Bool {
+        debugOverridePro || _isPro
+    }
+    private(set) var _isPro: Bool = false
+    #else
+    private(set) var isPro: Bool = false
+    #endif
 
     var monthlyProduct: Product? { products.first { $0.id == Self.monthlyID } }
     var yearlyProduct: Product? { products.first { $0.id == Self.yearlyID } }
@@ -91,27 +103,34 @@ final class StoreManager {
     // MARK: - Entitlements
 
     func refreshEntitlements() async {
+        var entitled = false
+
         // Check for lifetime (non-consumable)
         if let result = await Transaction.latest(for: Self.lifetimeID) {
             if case .verified(let transaction) = result, transaction.revocationDate == nil {
-                isPro = true
-                return
+                entitled = true
             }
         }
 
         // Check for active subscription
-        for id in [Self.yearlyID, Self.monthlyID] {
-            if let result = await Transaction.latest(for: id) {
-                if case .verified(let transaction) = result,
-                   transaction.revocationDate == nil,
-                   transaction.expirationDate ?? .distantFuture > Date.now {
-                    isPro = true
-                    return
+        if !entitled {
+            for id in [Self.yearlyID, Self.monthlyID] {
+                if let result = await Transaction.latest(for: id) {
+                    if case .verified(let transaction) = result,
+                       transaction.revocationDate == nil,
+                       transaction.expirationDate ?? .distantFuture > Date.now {
+                        entitled = true
+                        break
+                    }
                 }
             }
         }
 
-        isPro = false
+        #if DEBUG
+        _isPro = entitled
+        #else
+        isPro = entitled
+        #endif
     }
 
     // MARK: - Transaction listener

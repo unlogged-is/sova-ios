@@ -20,6 +20,7 @@ struct AddItemView: View {
     @State private var purchaseDate: Date = .now
     @State private var hasPurchaseDate: Bool = false
     @State private var notes: String = ""
+    @State private var locationName: String = ""
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var photoData: [Data] = []
     @State private var showDeleteConfirmation: Bool = false
@@ -33,9 +34,13 @@ struct AddItemView: View {
         var id: String { rawValue }
     }
     @State private var coverPhotoIndex: Int?
+    @State private var photoIndexToDelete: Int?
 
     // Category-specific fields
     @State private var customFieldValues: [String: String] = [:]
+
+    // Home-specific rooms
+    @State private var roomDrafts: [RoomDraft] = []
 
     // Reminders
     @State private var reminderDrafts: [ReminderDraft] = []
@@ -54,7 +59,7 @@ struct AddItemView: View {
 
     /// Categories that auto-generate their title from custom fields
     private var categoryAutoGeneratesTitle: Bool {
-        category == .car
+        category == .car || category == .bike || category == .home
     }
 
     /// Auto-generated title built from category-specific fields
@@ -65,6 +70,16 @@ struct AddItemView: View {
             let make = customFieldValues["make"]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             let model = customFieldValues["model"]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             return [year, make, model].filter { !$0.isEmpty }.joined(separator: " ")
+        case .bike:
+            let year = customFieldValues["year"]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let brand = customFieldValues["brand"]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let model = customFieldValues["model"]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return [year, brand, model].filter { !$0.isEmpty }.joined(separator: " ")
+        case .home:
+            let street = customFieldValues[HomeFieldKeys.street]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if !street.isEmpty { return street }
+            let city = customFieldValues[HomeFieldKeys.city]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return city
         default:
             return ""
         }
@@ -80,6 +95,7 @@ struct AddItemView: View {
         if !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
         if !notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
         if !photoData.isEmpty { return true }
+        if !roomDrafts.isEmpty { return true }
         if !reminderDrafts.isEmpty { return true }
         if customFieldValues.values.contains(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) { return true }
         return false
@@ -88,64 +104,38 @@ struct AddItemView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    if !categoryAutoGeneratesTitle {
-                        TextField("Item name", text: $title)
-                            .font(SovaFont.body(.body))
-                    }
-                    if let custom = customCategory {
-                        HStack {
-                            Text("Category")
-                            Spacer()
-                            Label(custom.name, systemImage: custom.symbolName)
-                                .font(SovaFont.body(.body))
-                                .foregroundStyle(.sovaSecondaryText)
-                        }
-                    } else {
-                        Picker("Category", selection: $category) {
-                            ForEach(SovaCategory.allCases.filter { $0 != .other }) { category in
-                                Label(category.rawValue, systemImage: category.symbolName)
-                                    .tag(category)
-                            }
-                        }
-                    }
+                categorySectionView
+
+                nameSectionView
+
+                if category == .receipt {
+                    photosSection
                 }
 
                 if !categoryFields.isEmpty {
                     categoryDetailsSection
                 }
 
-                Section("Dates") {
-                    Toggle("Purchase date", isOn: $hasPurchaseDate.animation())
-                    if hasPurchaseDate {
-                        DatePicker("Purchased", selection: $purchaseDate, displayedComponents: .date)
-                    }
+                if category == .home {
+                    homeAddressSection
+                    homeRoomsSection
+                }
+
+                if category != .receipt {
+                    datesSection
+
+                    locationSection
                 }
 
                 remindersSection
 
-                Section("Notes") {
-                    TextField("Notes, warranty details, service reminders", text: $notes, axis: .vertical)
-                        .font(SovaFont.body(.body))
-                        .lineLimit(4...8)
+                notesSection
+
+                if category != .receipt {
+                    photosSection
                 }
 
-                photosSection
-
-                if isEditing {
-                    Section {
-                        Button(role: .destructive) {
-                            showDeleteConfirmation = true
-                        } label: {
-                            HStack {
-                                Spacer()
-                                Label("Delete item", systemImage: "trash")
-                                    .font(SovaFont.body(.body, weight: .medium))
-                                Spacer()
-                            }
-                        }
-                    }
-                }
+                deleteSection
             }
             .scrollContentBackground(.hidden)
             .background(.sovaBackground)
@@ -195,6 +185,25 @@ struct AddItemView: View {
             } message: {
                 Text("You have unsaved changes that will be lost.")
             }
+            .alert(
+                "Delete this photo?",
+                isPresented: Binding(
+                    get: { photoIndexToDelete != nil },
+                    set: { if !$0 { photoIndexToDelete = nil } }
+                )
+            ) {
+                Button("Delete", role: .destructive) {
+                    if let idx = photoIndexToDelete {
+                        _ = withAnimation(SovaAccessibility.animation(.snappy(duration: 0.2))) {
+                            photoData.remove(at: idx)
+                        }
+                        photoIndexToDelete = nil
+                    }
+                }
+                Button("Cancel", role: .cancel) {
+                    photoIndexToDelete = nil
+                }
+            }
             .interactiveDismissDisabled(!isEditing && hasUnsavedChanges)
             .onAppear {
                 if itemToEdit == nil {
@@ -206,6 +215,7 @@ struct AddItemView: View {
                 // Clear custom fields when category changes (unless editing)
                 if !isEditing {
                     customFieldValues = [:]
+                    roomDrafts = []
                 }
             }
             .onChange(of: photoData.count) { _, newCount in
@@ -280,6 +290,41 @@ struct AddItemView: View {
         }
     }
 
+    // MARK: - Category Section
+
+    private var categorySectionView: some View {
+        Section {
+            if let custom = customCategory {
+                HStack {
+                    Text("Category")
+                    Spacer()
+                    Label(custom.name, systemImage: custom.symbolName)
+                        .font(SovaFont.body(.body))
+                        .foregroundStyle(.sovaSecondaryText)
+                }
+            } else {
+                Picker("Category", selection: $category) {
+                    ForEach(SovaCategory.allCases.filter { $0 != .other }) { category in
+                        Label(category.rawValue, systemImage: category.symbolName)
+                            .tag(category)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Name Section
+
+    @ViewBuilder
+    private var nameSectionView: some View {
+        if !categoryAutoGeneratesTitle {
+            Section {
+                TextField("Item name", text: $title)
+                    .font(SovaFont.body(.body))
+            }
+        }
+    }
+
     // MARK: - Category Details Section
 
     private var categoryDetailsSection: some View {
@@ -293,6 +338,112 @@ struct AddItemView: View {
                 case .date:
                     DatePicker(field.label, selection: dateFieldBinding(for: field.key), displayedComponents: .date)
                 }
+            }
+        }
+    }
+
+    // MARK: - Dates Section
+
+    private var datesSection: some View {
+        Section("Dates") {
+            Toggle("Purchase date", isOn: $hasPurchaseDate.animation())
+            if hasPurchaseDate {
+                DatePicker("Purchased", selection: $purchaseDate, displayedComponents: .date)
+            }
+        }
+    }
+
+    // MARK: - Delete Section
+
+    @ViewBuilder
+    private var deleteSection: some View {
+        if isEditing {
+            Section {
+                Button(role: .destructive) {
+                    showDeleteConfirmation = true
+                } label: {
+                    HStack {
+                        Spacer()
+                        Label("Delete item", systemImage: "trash")
+                            .font(SovaFont.body(.body, weight: .medium))
+                        Spacer()
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Location Section
+
+    @ViewBuilder
+    private var locationSection: some View {
+        if category != .car && category != .home {
+            Section {
+                TextField("e.g. Kitchen, Garage, Basement", text: $locationName)
+                    .font(SovaFont.body(.body))
+            } header: {
+                Text("Location")
+            }
+        }
+    }
+
+    // MARK: - Notes Section
+
+    private var notesSection: some View {
+        Section("Notes") {
+            TextField("Notes, warranty details, service reminders", text: $notes, axis: .vertical)
+                .font(SovaFont.body(.body))
+                .lineLimit(4...8)
+        }
+    }
+
+    // MARK: - Home Address Section
+
+    private var homeAddressSection: some View {
+        Section("Address") {
+            TextField("Street", text: fieldBinding(for: HomeFieldKeys.street))
+                .font(SovaFont.body(.body))
+            TextField("City", text: fieldBinding(for: HomeFieldKeys.city))
+                .font(SovaFont.body(.body))
+            HStack {
+                TextField("State", text: fieldBinding(for: HomeFieldKeys.state))
+                    .font(SovaFont.body(.body))
+                TextField("ZIP", text: fieldBinding(for: HomeFieldKeys.zip))
+                    .font(SovaFont.body(.body))
+                    .keyboardType(.numberPad)
+            }
+        }
+    }
+
+    // MARK: - Home Rooms Section
+
+    private var homeRoomsSection: some View {
+        Section("Rooms") {
+            if roomDrafts.isEmpty {
+                Text("No rooms yet")
+                    .font(SovaFont.body(.body))
+                    .foregroundStyle(.sovaSecondaryText)
+            } else {
+                ForEach($roomDrafts) { $draft in
+                    HStack {
+                        TextField("Room name", text: $draft.name)
+                            .font(SovaFont.body(.body))
+                        TextField("Sq ft", text: $draft.squareFootage)
+                            .font(SovaFont.body(.body))
+                            .keyboardType(.numberPad)
+                            .frame(width: 80)
+                    }
+                }
+                .onDelete { indexSet in
+                    roomDrafts.remove(atOffsets: indexSet)
+                }
+            }
+
+            Button {
+                roomDrafts.append(RoomDraft())
+            } label: {
+                Label("Add room", systemImage: "plus.circle")
+                    .font(SovaFont.body(.body))
             }
         }
     }
@@ -382,40 +533,7 @@ struct AddItemView: View {
                     .font(SovaFont.mono(.caption))
                     .foregroundStyle(.sovaSecondaryText)
 
-                ScrollView(.horizontal) {
-                    HStack(spacing: 12) {
-                        ForEach(Array(photoData.enumerated()), id: \.offset) { index, data in
-                            if let image = UIImage(data: data) {
-                                Button {
-                                    withAnimation(SovaAccessibility.animation(.snappy(duration: 0.2))) {
-                                        coverPhotoIndex = coverPhotoIndex == index ? nil : index
-                                    }
-                                } label: {
-                                    Image(uiImage: image)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                        .frame(width: 96, height: 96)
-                                        .clipped()
-                                        .clipShape(.rect(cornerRadius: 16))
-                                        .overlay {
-                                            if coverPhotoIndex == index {
-                                                RoundedRectangle(cornerRadius: 16)
-                                                    .stroke(Color.sovaPrimaryAccent, lineWidth: 3)
-                                                Image(systemName: "checkmark.circle.fill")
-                                                    .font(.title3)
-                                                    .foregroundStyle(.white, Color.sovaPrimaryAccent)
-                                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                                                    .padding(6)
-                                            }
-                                        }
-                                        .accessibilityLabel(coverPhotoIndex == index ? "Cover photo \(index + 1)" : "Photo \(index + 1)")
-                                }
-                            }
-                        }
-                    }
-                }
-                .contentMargins(.horizontal, 16)
-                .scrollIndicators(.hidden)
+                photoThumbnails
             }
         } header: {
             Text("Photos")
@@ -423,6 +541,59 @@ struct AddItemView: View {
             if coverPhotoIndex != nil {
                 Text("Selected photo will replace the category icon on the card.")
             }
+        }
+    }
+
+    private var photoThumbnails: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 12) {
+                ForEach(Array(photoData.enumerated()), id: \.offset) { index, data in
+                    photoThumbnail(data: data, index: index)
+                }
+            }
+        }
+        .contentMargins(.horizontal, 16)
+        .scrollIndicators(.hidden)
+    }
+
+    @ViewBuilder
+    private func photoThumbnail(data: Data, index: Int) -> some View {
+        if let image = UIImage(data: data) {
+            ZStack(alignment: .topLeading) {
+                Button {
+                    withAnimation(SovaAccessibility.animation(.snappy(duration: 0.2))) {
+                        coverPhotoIndex = coverPhotoIndex == index ? nil : index
+                    }
+                } label: {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 96, height: 96)
+                        .clipped()
+                        .clipShape(.rect(cornerRadius: 16))
+                        .overlay {
+                            if coverPhotoIndex == index {
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(Color.sovaPrimaryAccent, lineWidth: 3)
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(.white, Color.sovaPrimaryAccent)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                                    .padding(6)
+                            }
+                        }
+                }
+
+                Button {
+                    photoIndexToDelete = index
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.body)
+                        .foregroundStyle(.white, .red)
+                }
+                .padding(4)
+            }
+            .accessibilityLabel(coverPhotoIndex == index ? "Cover photo \(index + 1)" : "Photo \(index + 1)")
         }
     }
 
@@ -451,10 +622,37 @@ struct AddItemView: View {
 
     // MARK: - Save
 
+    private func syncRoomDraftsToCustomFields() {
+        // Clear previous room entries
+        let previousCount = Int(customFieldValues[HomeFieldKeys.roomCount] ?? "0") ?? 0
+        for i in 0..<previousCount {
+            customFieldValues.removeValue(forKey: HomeFieldKeys.roomName(i))
+            customFieldValues.removeValue(forKey: HomeFieldKeys.roomSqft(i))
+        }
+        // Clear legacy keys
+        customFieldValues.removeValue(forKey: HomeFieldKeys.legacyAreaRoom)
+        customFieldValues.removeValue(forKey: HomeFieldKeys.legacySquareFootage)
+
+        // Write current rooms
+        let validRooms = roomDrafts.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        customFieldValues[HomeFieldKeys.roomCount] = String(validRooms.count)
+        for (index, room) in validRooms.enumerated() {
+            customFieldValues[HomeFieldKeys.roomName(index)] = room.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            let sqft = room.squareFootage.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !sqft.isEmpty {
+                customFieldValues[HomeFieldKeys.roomSqft(index)] = sqft
+            }
+        }
+    }
+
     private func save() {
         let trimmedTitle = effectiveTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedDescription = itemDescription.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if category == .home {
+            syncRoomDraftsToCustomFields()
+        }
 
         if let existing = itemToEdit {
             existing.title = trimmedTitle
@@ -468,6 +666,7 @@ struct AddItemView: View {
             }
             existing.purchaseDate = hasPurchaseDate ? purchaseDate : nil
             existing.notes = trimmedNotes
+            existing.locationName = locationName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : locationName.trimmingCharacters(in: .whitespacesAndNewlines)
             existing.updatedAt = .now
 
             // Custom fields
@@ -490,10 +689,12 @@ struct AddItemView: View {
             // Schedule notifications for updated reminders
             NotificationManager.scheduleRemindersForItem(existing)
         } else {
+            let trimmedLocation = locationName.trimmingCharacters(in: .whitespacesAndNewlines)
             let item = MaintenanceItem(
                 title: trimmedTitle,
                 itemDescription: trimmedDescription,
                 categoryRawValue: category.rawValue,
+                locationName: trimmedLocation.isEmpty ? nil : trimmedLocation,
                 purchaseDate: hasPurchaseDate ? purchaseDate : nil,
                 notes: trimmedNotes,
                 updatedAt: .now
@@ -534,6 +735,8 @@ struct AddItemView: View {
             // Schedule notifications for new reminders
             NotificationManager.scheduleRemindersForItem(item)
         }
+        // Force save so PersistentIdentifier is finalized before navigation
+        try? modelContext.save()
         dismiss()
     }
 
@@ -590,10 +793,29 @@ struct AddItemView: View {
             hasPurchaseDate = true
         }
         notes = item.notes
+        locationName = item.locationName ?? ""
         photoData = item.photoData
         coverPhotoIndex = item.coverPhotoIndex
         customFieldValues = item.customFields
         reminderDrafts = (item.reminders ?? []).map { ReminderDraft(from: $0) }
+
+        // Populate room drafts for Home items
+        if item.category == .home {
+            let fields = item.customFields
+            if let countStr = fields[HomeFieldKeys.roomCount], let count = Int(countStr), count > 0 {
+                roomDrafts = (0..<count).map { i in
+                    RoomDraft(
+                        name: fields[HomeFieldKeys.roomName(i)] ?? "",
+                        squareFootage: fields[HomeFieldKeys.roomSqft(i)] ?? ""
+                    )
+                }
+            } else if let legacyRoom = fields[HomeFieldKeys.legacyAreaRoom], !legacyRoom.isEmpty {
+                roomDrafts = [RoomDraft(
+                    name: legacyRoom,
+                    squareFootage: fields[HomeFieldKeys.legacySquareFootage] ?? ""
+                )]
+            }
+        }
     }
 
     // MARK: - Camera Access
@@ -621,7 +843,7 @@ struct AddItemView: View {
 
     /// Compresses a photo to JPEG at 0.8 quality, capping the longest edge at 2048px.
     /// Keeps enough detail for receipt text to remain readable.
-    private static func compressPhoto(_ data: Data) -> Data? {
+    static func compressPhoto(_ data: Data) -> Data? {
         guard let image = UIImage(data: data) else { return data }
 
         let maxDimension: CGFloat = 2048
@@ -646,7 +868,7 @@ struct AddItemView: View {
 
 // MARK: - Camera Picker
 
-private struct CameraPickerView: UIViewControllerRepresentable {
+struct CameraPickerView: UIViewControllerRepresentable {
     @Environment(\.dismiss) private var dismiss
     var onCapture: (UIImage) -> Void
 
@@ -687,7 +909,7 @@ private struct CameraPickerView: UIViewControllerRepresentable {
 
 // MARK: - Document Scanner
 
-private struct DocumentScannerView: UIViewControllerRepresentable {
+struct DocumentScannerView: UIViewControllerRepresentable {
     @Environment(\.dismiss) private var dismiss
     var onScan: ([UIImage]) -> Void
 

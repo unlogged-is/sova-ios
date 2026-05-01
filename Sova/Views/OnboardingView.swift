@@ -14,6 +14,7 @@ struct OnboardingView: View {
     @State private var carYear: String = ""
     @State private var carMileage: String = ""
     @AppStorage("usesMetricUnits") private var usesMetricUnits: Bool = false
+    @AppStorage("sovaAppearance") private var appearance: String = SovaAppearance.system.rawValue
 
     var body: some View {
         NavigationStack {
@@ -140,19 +141,50 @@ struct OnboardingView: View {
         VStack(spacing: 24) {
             Spacer()
 
-            Image(systemName: "bell.badge.fill")
+            Image(systemName: "gearshape.fill")
                 .font(.system(size: 56))
-                .foregroundStyle(.sovaWarmAccent)
+                .foregroundStyle(.sovaPrimaryAccent)
 
-            Text("Stay on top of things")
+            Text("Make it yours")
                 .font(SovaFont.title(.title2))
                 .foregroundStyle(.sovaPrimaryText)
 
-            Text("Get a heads-up when maintenance is due so nothing slips through the cracks.")
+            Text("Choose your look and decide how you want to be reminded.")
                 .font(SovaFont.body(.body))
                 .foregroundStyle(.sovaSecondaryText)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
+
+            VStack(spacing: 8) {
+                Text("Appearance")
+                    .font(SovaFont.mono(.caption, weight: .medium))
+                    .foregroundStyle(.sovaSecondaryText)
+
+                Picker("Appearance", selection: $appearance) {
+                    ForEach(SovaAppearance.allCases) { option in
+                        Text(option.rawValue).tag(option.rawValue)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+            .padding(.horizontal, 8)
+            .padding(.bottom, 70)
+
+            VStack(spacing: 12) {
+                Image(systemName: "bell.badge.fill")
+                    .font(.system(size: 44))
+                    .foregroundStyle(.sovaPrimaryAccent)
+
+                Text("Stay on top of things")
+                    .font(SovaFont.body(.headline, weight: .semibold))
+                    .foregroundStyle(.sovaPrimaryText)
+
+                Text("Get a heads-up when maintenance is due so nothing slips through the cracks.")
+                    .font(SovaFont.body(.subheadline))
+                    .foregroundStyle(.sovaSecondaryText)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
 
             Spacer()
 
@@ -160,7 +192,7 @@ struct OnboardingView: View {
                 Button {
                     withAnimation { currentPage = 3 }
                 } label: {
-                    Text("Maybe later")
+                    Text("Skip notifications")
                         .font(SovaFont.body(.body))
                         .foregroundStyle(.sovaSecondaryText)
                 }
@@ -206,7 +238,7 @@ struct OnboardingView: View {
                         .foregroundStyle(.sovaSecondaryText)
 
                     HStack(spacing: 10) {
-                        TextField("e.g. 45000", text: $carMileage)
+                        TextField("e.g. 45,000", text: $carMileage)
                             .font(SovaFont.body(.body))
                             .foregroundStyle(.sovaPrimaryText)
                             .keyboardType(.numberPad)
@@ -315,6 +347,7 @@ struct OnboardingView: View {
         }
         car.customFields = fields
         modelContext.insert(car)
+        try? modelContext.save()
         completeOnboarding()
     }
 
